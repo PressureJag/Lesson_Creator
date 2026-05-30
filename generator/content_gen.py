@@ -6,11 +6,17 @@ import subprocess
 
 _demo_mode = not bool(shutil.which("claude"))
 _class_profile: dict = {}
+_class_rating: dict = {}
 
 
 def set_class_profile(profile: dict) -> None:
     global _class_profile
     _class_profile = profile
+
+
+def set_rating(rating: dict) -> None:
+    global _class_rating
+    _class_rating = rating
 
 
 def _build_system_prompt() -> str:
@@ -24,6 +30,8 @@ def _build_system_prompt() -> str:
             f"\nClass: {_class_profile.get('label', '')}. "
             f"Pitch: {_class_profile.get('pitch_guidance', '')} — apply to difficulty, scaffolding, notation."
         )
+    if _class_rating:
+        base += f"\nRating: {_class_rating.get('guidance', '')}"
     return base
 
 # ── JSON schemas for structured outputs ──────────────────────────────────────

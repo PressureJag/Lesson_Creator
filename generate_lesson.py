@@ -25,7 +25,7 @@ from generator import sow_parser, content_gen, slide_builder, diagram_gen, plann
 from generator import theme as T
 from generator.notification import header, notify, prompt_choice
 from generator import gdrive
-from generator import module_selector, class_profile as cp
+from generator import module_selector, wizard, class_profile as cp
 
 
 # ── Diagram builder ──────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ def build_diagram(obj_text: str, methods_text: str = "", diagram_override=None):
 
 # ── Slide deck assembly ──────────────────────────────────────────────────────
 
-def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> None:
+def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str, max_objectives: int = None) -> None:
     import json as _json
 
     prs = Presentation()
@@ -91,6 +91,8 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
     prs.slide_height = T.SLIDE_HEIGHT
 
     objectives = sow["objectives"]
+    if max_objectives is not None:
+        objectives = objectives[:max_objectives]
     prior      = sow["prior_knowledge"]
     misconcs   = sow["misconceptions"]
     vocab      = sow["vocabulary"]
@@ -413,11 +415,42 @@ def main():
     mode_label = "DEMO" if demo else "FULL (API)"
     notify(f"Mode: {mode_label}", "info")
 
+    # ── Lesson setup wizard (skipped if --year + --pitch supplied) ───────────────
+    if args.year and args.pitch:
+        pitch_key = args.pitch.strip().title()
+        if pitch_key not in cp._PITCH_GUIDANCE:
+            pitch_key = "Core Plus"
+        profile = {
+            "year_group":     args.year.strip(),
+            "pitch":          pitch_key,
+            "pitch_guidance": cp._PITCH_GUIDANCE[pitch_key],
+            "label":          f"{args.year.strip()} — {pitch_key}",
+        }
+        content_gen.set_class_profile(profile)
+        content_gen.set_rating({"band": "5-7", "guidance": wizard._RATING_GUIDANCE["5-7"]})
+        rating_band = "5-7"
+        scope = "full"
+        notify(f"Class: {profile['label']} (from CLI flags)", "info")
+    else:
+        setup = wizard.run_wizard()
+        profile = {
+            "year_group":     setup["year_group"],
+            "pitch":          setup["pitch"],
+            "pitch_guidance": setup["pitch_guidance"],
+            "label":          setup["label"],
+        }
+        content_gen.set_class_profile(profile)
+        content_gen.set_rating({
+            "band":     setup["rating_band"],
+            "guidance": setup["rating_guidance"],
+        })
+        rating_band = setup["rating_band"]
+        scope = setup["scope"]
+
     # ── Module / PDF resolution ───────────────────────────────
     summary_path = args.summary
     methods_path = args.methods
     topic_override = args.topic
-    module_tier = ""
 
     if not summary_path or not methods_path:
         result = module_selector.select_module()
@@ -434,15 +467,6 @@ def main():
             summary_path   = result["summary_pdf"]
             methods_path   = result["methods_pdf"]
             topic_override = topic_override or result["topic_name"]
-            module_tier    = result["module"].get("tier_name", "")
-
-    # ── Class profile ─────────────────────────────────────────
-    profile = cp.select_profile(
-        year=args.year,
-        pitch=args.pitch,
-        default_pitch=module_tier or "Core Plus",
-    )
-    content_gen.set_class_profile(profile)
 
     # ── Parse PDFs ────────────────────────────────────────────
     notify("Parsing Summary of Intent …", "progress")
@@ -461,9 +485,12 @@ def main():
 
     notify(f"Topic:   {topic_name}", "info")
     notify(f"Class:   {profile['label']}", "info")
+    notify(f"Rating:  {rating_band}", "info")
+    notify(f"Scope:   {'Single lesson (1 objective)' if scope == 'single' else 'Full sequence'}", "info")
     notify(f"Output:  {output_path}", "info")
 
-    build_deck(sow, methods, topic_name, output_path)
+    build_deck(sow, methods, topic_name, output_path,
+               max_objectives=1 if scope == "single" else None)
 
 
 def _ask_pdf_path(label: str) -> str:
