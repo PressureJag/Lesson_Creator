@@ -303,34 +303,34 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
 
 def _confirm_mode() -> bool:
     """
-    Ask the user whether to run in demo mode or full API mode.
+    Ask the user whether to run in demo mode or full generation mode.
     Returns True if demo mode, False if full mode.
     Defaults to demo mode after 2 minutes.
     """
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    has_key = bool(api_key)
+    import shutil
+    has_claude = bool(shutil.which("claude"))
 
-    if not has_key:
+    if not has_claude:
         header(
             "LESSON CREATOR  —  Outwood Grange Academies Trust",
-            "Demo mode  (no ANTHROPIC_API_KEY found)",
+            "Demo mode  (claude CLI not found on PATH)",
         )
         notify("Running in demo mode — stub content will be used", "info")
-        notify("Set ANTHROPIC_API_KEY to generate real AI content", "info")
+        notify("Install Claude Code to generate real AI content", "info")
         return True  # no choice needed
 
     header(
         "LESSON CREATOR  —  Outwood Grange Academies Trust",
-        "API key detected — choose generation mode",
+        "Claude Code detected — choose generation mode",
     )
 
     choice = prompt_choice(
         title="SELECT GENERATION MODE",
         options=[
             ("Demo mode",
-             "Fast — uses realistic stub content, no API calls, no cost"),
-            ("Full generation (uses API)",
-             "Slow — real AI-generated maths content via Claude API (~£0.05–£0.50 per deck)"),
+             "Fast — uses realistic stub content, no AI calls, no cost"),
+            ("Full generation (uses Claude Code)",
+             "Slow — real AI-generated maths content via local claude CLI"),
             ("Cancel",
              "Exit without generating"),
         ],

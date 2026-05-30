@@ -1,10 +1,10 @@
-"""Generate lesson content via Claude API, with stub fallback when no key is set."""
+"""Generate lesson content via the local Claude Code CLI, with stub fallback."""
 
 import json
-import os
+import shutil
+import subprocess
 
-_client = None
-_demo_mode = not bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+_demo_mode = not bool(shutil.which("claude"))
 
 # ── Shared system prompt (cached via cache_control) ───────────────────────────
 
@@ -151,47 +151,38 @@ def set_demo_mode(value: bool) -> None:
     _demo_mode = value
 
 
-def _get_client():
-    global _client
-    if _client is None:
-        import anthropic
-        _client = anthropic.Anthropic()
-    return _client
-
-
 def _call(prompt: str, max_tokens: int = 800,
           model: str = "claude-sonnet-4-6") -> str:
-    """Plain-text API call with cached system prompt."""
-    client = _get_client()
-    msg = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=[{
-            "type": "text",
-            "text": _SYSTEM_PROMPT,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": prompt}],
+    """Non-interactive call to the local claude CLI."""
+    full_prompt = f"{_SYSTEM_PROMPT}\n\n{prompt}"
+    proc = subprocess.run(
+        ["claude", "--print", "--model", model, "--output-format", "json"],
+        input=full_prompt,
+        capture_output=True,
+        text=True,
+        timeout=180,
     )
-    return msg.content[0].text.strip()
+    if proc.returncode != 0:
+        raise RuntimeError(f"claude CLI failed: {(proc.stderr or proc.stdout).strip()}")
+    data = json.loads(proc.stdout)
+    return data.get("result", "").strip()
 
 
 def _call_json(prompt: str, schema: dict, max_tokens: int = 1500,
                model: str = "claude-opus-4-8") -> dict:
-    """JSON API call using structured outputs — guarantees valid JSON matching schema."""
-    client = _get_client()
-    msg = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=[{
-            "type": "text",
-            "text": _SYSTEM_PROMPT,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        output_config={"format": {"type": "json_schema", "schema": schema}},
-        messages=[{"role": "user", "content": prompt}],
+    """Call the local claude CLI and parse a JSON response."""
+    json_instruction = (
+        "\n\nReturn ONLY valid JSON — no markdown fences, no explanation. "
+        f"Match this schema exactly:\n{json.dumps(schema)}"
     )
-    return json.loads(msg.content[0].text)
+    text = _call(prompt + json_instruction, max_tokens=max_tokens, model=model)
+    # Strip accidental code fences
+    if "```" in text:
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.split("```")[0].strip()
+    return json.loads(text)
 
 
 # ── Stub helpers (no API) ────────────────────────────────────────────────────
