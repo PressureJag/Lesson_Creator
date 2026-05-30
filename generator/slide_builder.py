@@ -11,9 +11,9 @@ from . import theme as T
 
 # ── Layout geometry (16:9 slide: 13.33" × 7.5") ─────────────────────────────
 _L   = Inches(0.25)    # left margin
-_CT  = Inches(0.58)    # content top (below header)
+_CT  = Inches(0.68)    # content top (below taller header)
 _CW  = Inches(12.83)   # full content width
-_CH  = Inches(6.67)    # usable content height
+_CH  = Inches(6.57)    # usable content height
 _COL = Inches(6.14)    # column width for 2-column layouts
 _R2  = Inches(6.69)    # right-column x start  (L + COL + 0.30" gap)
 
@@ -84,6 +84,56 @@ def _box(slide, left, top, width, height, fill_colour,
     return shape
 
 
+def _rounded_box(slide, left, top, width, height, fill_colour,
+                 text="", text_colour=None, font_size=None, bold=False,
+                 alignment=PP_ALIGN.CENTER, border_colour=None, border_pt=2.0,
+                 word_wrap=True, rounding=0.06):
+    """Rounded-rectangle card (shape type 5) with optional text."""
+    shape = slide.shapes.add_shape(5, left, top, width, height)  # 5 = ROUNDED_RECTANGLE
+    shape.adjustments[0] = rounding
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill_colour
+    if border_colour:
+        shape.line.color.rgb = border_colour
+        shape.line.width = Pt(border_pt)
+    else:
+        shape.line.fill.background()
+    if text:
+        tf = shape.text_frame
+        tf.word_wrap = word_wrap
+        p = tf.paragraphs[0]
+        p.alignment = alignment
+        run = p.add_run()
+        run.text = text
+        run.font.name = T.FONT_NAME
+        run.font.size = font_size or T.BODY_SIZE
+        run.font.bold = bold
+        run.font.color.rgb = text_colour or T.WHITE
+    return shape
+
+
+def _circle(slide, cx, cy, diameter, fill_colour, text="",
+            text_colour=None, font_size=None, bold=True):
+    """Filled circle with centred text (used for step-number badges)."""
+    r = diameter / 2
+    shape = slide.shapes.add_shape(9, cx - r, cy - r, diameter, diameter)
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = fill_colour
+    shape.line.fill.background()
+    if text:
+        tf = shape.text_frame
+        tf.word_wrap = False
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        run = p.add_run()
+        run.text = text
+        run.font.name = T.FONT_NAME
+        run.font.size = font_size or Pt(18)
+        run.font.bold = bold
+        run.font.color.rgb = text_colour or T.WHITE
+    return shape
+
+
 def _embed_image(slide, img_bytes: io.BytesIO, left, top, width, height):
     slide.shapes.add_picture(img_bytes, left, top, width, height)
 
@@ -98,18 +148,18 @@ def _add_header(slide, slide_type: str, subtitle: str = "",
       2. Header bar     — rounded rect, navy border, slide_type + subtitle text
       3. Phase badge    — coloured circle, top-right  (omitted when badge_text is empty)
     """
-    H_TOP  = Inches(0.07)
-    H_H    = Inches(0.42)
-    BADGE_W = Inches(0.82)
-    BADGE_H = Inches(0.50)
+    H_TOP   = Inches(0.06)
+    H_H     = Inches(0.54)
+    BADGE_W = Inches(0.90)
+    BADGE_H = Inches(0.58)
 
     # 1 ── OGAT badge
     ogat = slide.shapes.add_shape(1,
-        Inches(0.08), H_TOP, Inches(0.52), H_H)
+        Inches(0.07), H_TOP, Inches(0.54), H_H)
     ogat.fill.solid()
     ogat.fill.fore_color.rgb = T.YELLOW_BG
     ogat.line.color.rgb = T.NAVY
-    ogat.line.width = Pt(1.5)
+    ogat.line.width = Pt(2.0)
     tf = ogat.text_frame
     tf.word_wrap = False
     p = tf.paragraphs[0]
@@ -117,13 +167,13 @@ def _add_header(slide, slide_type: str, subtitle: str = "",
     run = p.add_run()
     run.text = "OGAT"
     run.font.name = T.FONT_NAME
-    run.font.size = Pt(10)
+    run.font.size = Pt(11)
     run.font.bold = True
     run.font.color.rgb = T.NAVY
 
     # 2 ── Header bar
     badge_space = (BADGE_W + Inches(0.10)) if badge_text else Inches(0.05)
-    hbar_left  = Inches(0.64)
+    hbar_left  = Inches(0.66)
     hbar_width = T.SLIDE_WIDTH - hbar_left - badge_space
 
     hbar = slide.shapes.add_shape(1,
@@ -131,7 +181,7 @@ def _add_header(slide, slide_type: str, subtitle: str = "",
     hbar.fill.solid()
     hbar.fill.fore_color.rgb = T.WHITE
     hbar.line.color.rgb = T.NAVY
-    hbar.line.width = Pt(1.5)
+    hbar.line.width = Pt(2.0)
 
     tf = hbar.text_frame
     tf.word_wrap = False
@@ -141,7 +191,7 @@ def _add_header(slide, slide_type: str, subtitle: str = "",
     run1 = p.add_run()
     run1.text = slide_type
     run1.font.name = T.FONT_NAME
-    run1.font.size = Pt(18)
+    run1.font.size = Pt(26)
     run1.font.bold = True
     run1.font.color.rgb = T.NAVY
 
@@ -149,15 +199,15 @@ def _add_header(slide, slide_type: str, subtitle: str = "",
         run2 = p.add_run()
         run2.text = f"   {subtitle}"
         run2.font.name = T.FONT_NAME
-        run2.font.size = Pt(12)
+        run2.font.size = Pt(14)
         run2.font.bold = False
         run2.font.color.rgb = T.NAVY
 
     # 3 ── Phase badge (circle)
     if badge_text and badge_colour:
-        badge_left = T.SLIDE_WIDTH - BADGE_W - Inches(0.06)
+        badge_left = T.SLIDE_WIDTH - BADGE_W - Inches(0.05)
         badge = slide.shapes.add_shape(9,   # oval
-            badge_left, Inches(0.03), BADGE_W, BADGE_H)
+            badge_left, Inches(0.02), BADGE_W, BADGE_H)
         badge.fill.solid()
         badge.fill.fore_color.rgb = badge_colour
         badge.line.fill.background()
@@ -168,7 +218,7 @@ def _add_header(slide, slide_type: str, subtitle: str = "",
         run = p.add_run()
         run.text = badge_text
         run.font.name = T.FONT_NAME
-        run.font.size = Pt(9)
+        run.font.size = Pt(10)
         run.font.bold = True
         run.font.color.rgb = T.WHITE
 
@@ -325,9 +375,7 @@ def make_vocabulary(prs: Presentation, topic_name: str,
 
 def make_starter_plus(prs: Presentation, topic_name: str,
                       questions: list[str], answers: list[str] = None) -> None:
-    """4-question starter in a 2×2 card grid.
-    Pass answers= to render the answers version.
-    """
+    """4-question starter in a 2×2 rounded-card grid."""
     is_answers = bool(answers)
     slide = _blank_slide(prs)
 
@@ -335,73 +383,89 @@ def make_starter_plus(prs: Presentation, topic_name: str,
         _add_header(slide, "STARTER", "let's check our answers",
                     "Feed-back", T.TEAL)
     else:
-        _add_header(slide, "STARTER", "", "Recap & Recall", T.ORANGE)
+        _add_header(slide, "STARTER", "Can you remember what we've learned?",
+                    "Recap & Recall", T.ORANGE)
 
     card_colours = [T.CARD_YELLOW, T.CARD_PEACH, T.CARD_GREEN, T.CARD_BLUE]
-    positions = [
-        (_L,        _CT + Inches(0.08)),   # Q1 top-left
-        (_R2,       _CT + Inches(0.08)),   # Q2 top-right
-        (_L,        _CT + Inches(3.45)),   # Q3 bottom-left
-        (_R2,       _CT + Inches(3.45)),   # Q4 bottom-right
+    # Slightly darker border per card (gives a subtle edge)
+    border_colours = [
+        RGBColor(0xD4, 0xC0, 0x50),
+        RGBColor(0xD4, 0xA0, 0x60),
+        RGBColor(0x70, 0xB8, 0x80),
+        RGBColor(0x70, 0xAA, 0xD0),
     ]
-    card_w = _COL
-    card_h = Inches(3.25)
+    card_icons = ["📝", "💡", "🎯", "⭐"]
+
+    CARD_W = _COL
+    CARD_H = Inches(3.10)
+    GAP    = Inches(0.15)
+
+    positions = [
+        (_L,  _CT + Inches(0.08)),
+        (_R2, _CT + Inches(0.08)),
+        (_L,  _CT + Inches(0.08) + CARD_H + GAP),
+        (_R2, _CT + Inches(0.08) + CARD_H + GAP),
+    ]
 
     q_list = (list(questions) + [""] * 4)[:4]
     a_list = (list(answers) if answers else []) + [""] * 4
+    answer_colours = [
+        RGBColor(0xC0, 0x39, 0x2B),  # deep red
+        RGBColor(0x1E, 0x5B, 0xB8),  # deep blue
+        RGBColor(0x1E, 0x7A, 0x3C),  # deep green
+        RGBColor(0x6A, 0x1B, 0x9A),  # deep purple
+    ]
 
-    for i, ((lft, top), colour) in enumerate(zip(positions, card_colours)):
-        # Card background
-        _box(slide, lft, top, card_w, card_h,
-             colour, border_colour=colour, border_pt=2.0)
+    for i, ((lft, top), colour, border) in enumerate(
+            zip(positions, card_colours, border_colours)):
 
-        # Question number
-        _textbox(slide, lft + Inches(0.12), top + Inches(0.10),
-                 Inches(0.50), Inches(0.35),
-                 text=f"{i + 1}.",
-                 font_size=Pt(16), bold=True, colour=T.NAVY)
+        _rounded_box(slide, lft, top, CARD_W, CARD_H,
+                     colour, border_colour=border, border_pt=2.0, rounding=0.06)
+
+        # Question number (bold, large)
+        _textbox(slide, lft + Inches(0.14), top + Inches(0.12),
+                 Inches(0.45), Inches(0.42),
+                 text=f"{i + 1}.", font_size=Pt(20), bold=True, colour=T.NAVY)
+
+        # Emoji icon — top-right of card
+        _textbox(slide, lft + CARD_W - Inches(0.55), top + Inches(0.08),
+                 Inches(0.48), Inches(0.40),
+                 text=card_icons[i], font_size=Pt(20),
+                 alignment=PP_ALIGN.CENTER)
 
         body = q_list[i]
         if is_answers and i < len(answers) and a_list[i]:
-            _answer_colours = [
-                RGBColor(0xC0, 0x39, 0x2B),  # Q1 red
-                RGBColor(0x1E, 0x5B, 0xB8),  # Q2 blue
-                RGBColor(0x2E, 0x8B, 0x57),  # Q3 green
-                RGBColor(0x8E, 0x44, 0xAD),  # Q4 purple
-            ]
-            answer_colour = _answer_colours[i % len(_answer_colours)]
-            # Question text
+            # Question text (compact, top of card)
             _textbox(slide, lft + Inches(0.55), top + Inches(0.10),
-                     card_w - Inches(0.65), Inches(0.75),
-                     text=body, font_size=Pt(15), colour=T.NAVY, word_wrap=True)
-            # Answer text in red
-            _textbox(slide, lft + Inches(0.15), top + Inches(0.95),
-                     card_w - Inches(0.25), card_h - Inches(1.05),
-                     text=a_list[i], font_size=Pt(15), bold=True,
-                     colour=answer_colour, word_wrap=True)
-            # Green checkmark
-            _textbox(slide, lft + card_w - Inches(0.45), top + card_h - Inches(0.40),
-                     Inches(0.38), Inches(0.35),
-                     text="✓", font_size=Pt(18), bold=True,
-                     colour=RGBColor(0x00, 0x99, 0x00))
+                     CARD_W - Inches(1.10), Inches(0.80),
+                     text=body, font_size=Pt(16), colour=T.NAVY, word_wrap=True)
+            # Answer in coloured bold text
+            _textbox(slide, lft + Inches(0.16), top + Inches(1.00),
+                     CARD_W - Inches(0.32), CARD_H - Inches(1.20),
+                     text=a_list[i], font_size=Pt(16), bold=True,
+                     colour=answer_colours[i], word_wrap=True)
+            # Green checkmark bottom-right
+            _textbox(slide, lft + CARD_W - Inches(0.48), top + CARD_H - Inches(0.42),
+                     Inches(0.40), Inches(0.38),
+                     text="✓", font_size=Pt(20), bold=True,
+                     colour=RGBColor(0x1E, 0x8A, 0x1E),
+                     alignment=PP_ALIGN.CENTER)
         else:
             # Question text
             _textbox(slide, lft + Inches(0.55), top + Inches(0.10),
-                     card_w - Inches(0.65), Inches(0.90),
-                     text=body, font_size=Pt(15), colour=T.NAVY, word_wrap=True)
-
+                     CARD_W - Inches(1.10), Inches(0.95),
+                     text=body, font_size=Pt(17), colour=T.NAVY, word_wrap=True)
             # "Working ..." prompt
-            _textbox(slide, lft + Inches(0.15), top + Inches(1.10),
-                     card_w - Inches(0.25), Inches(0.30),
-                     text="Working ...", font_size=Pt(11), italic=True,
-                     colour=RGBColor(0xC8, 0x8A, 0x00))
-
-            # Dashed working lines
+            _textbox(slide, lft + Inches(0.16), top + Inches(1.12),
+                     CARD_W - Inches(0.32), Inches(0.28),
+                     text="Working ...", font_size=Pt(12), italic=True,
+                     colour=RGBColor(0xC8, 0x7A, 0x00))
+            # Working lines (subtle dashes)
             for line_n in range(3):
-                line_y = top + Inches(1.50) + line_n * Inches(0.52)
-                _box(slide, lft + Inches(0.15), line_y,
-                     card_w - Inches(0.30), Inches(0.02),
-                     RGBColor(0xAA, 0xAA, 0xAA))
+                line_y = top + Inches(1.52) + line_n * Inches(0.50)
+                _box(slide, lft + Inches(0.16), line_y,
+                     CARD_W - Inches(0.32), Inches(0.025),
+                     RGBColor(0xBB, 0xBB, 0xBB))
 
 
 def make_learning_intro(prs: Presentation, topic_name: str,
@@ -475,70 +539,145 @@ def make_learning_intro(prs: Presentation, topic_name: str,
 
 def make_ido_slide(prs: Presentation, topic_name: str,
                    heading: str, worked_example: str,
-                   method_text: str = "", notes: str = "") -> None:
-    """I Do — teacher-led worked example.
+                   method_text: str = "", notes: str = "",
+                   diagram: "io.BytesIO | None" = None) -> None:
+    """I Do — teacher-led worked example with numbered step circles.
 
-    method_text: raw text from the Common Methods / Consistent Methodology PDF
-                 for this objective — displayed verbatim in the left panel so
-                 the mandated school method is always visible alongside the
-                 worked example.
-    notes:       AI-generated teacher note shown in the bottom key-idea bar.
+    diagram: optional BytesIO PNG from diagram_gen — shown in the left panel
+             instead of (or above) the method text.
     """
     slide = _blank_slide(prs)
     _add_header(slide, "Worked Example", heading, "I do", T.PURPLE)
 
-    # Question banner (yellow)
-    _box(slide, _L, _CT + Inches(0.10),
-         _CW, Inches(0.65),
-         T.CARD_YELLOW, text=heading,
-         text_colour=T.NAVY, font_size=Pt(18), bold=True,
-         alignment=PP_ALIGN.CENTER)
+    # Question banner (yellow, rounded)
+    _rounded_box(slide, _L, _CT + Inches(0.08),
+                 _CW, Inches(0.62),
+                 T.CARD_YELLOW, text=heading,
+                 text_colour=T.NAVY, font_size=Pt(20), bold=True,
+                 alignment=PP_ALIGN.CENTER, rounding=0.08)
 
-    content_top = _CT + Inches(0.85)
-    content_h   = Inches(4.60)
-    method_w    = Inches(4.30)
+    content_top = _CT + Inches(0.82)
+    content_h   = Inches(4.35)
+    method_w    = Inches(4.10)
     gap         = Inches(0.15)
     right_x     = _L + method_w + gap
+    right_w     = _CW - method_w - gap
 
-    if method_text:
-        # Left — Common Method panel (peach background, labelled)
-        _box(slide, _L, content_top, method_w, content_h,
-             T.CARD_PEACH, border_colour=T.ORANGE, border_pt=2.0)
-        _textbox(slide, _L + Inches(0.12), content_top + Inches(0.08),
-                 method_w - Inches(0.24), Inches(0.30),
-                 text="COMMON METHOD", font_size=Pt(11), bold=True,
+    if method_text or diagram:
+        # Left — Common Method panel (rounded, peach/orange)
+        _rounded_box(slide, _L, content_top, method_w, content_h,
+                     T.CARD_PEACH, border_colour=T.ORANGE, border_pt=2.5,
+                     rounding=0.06)
+        _textbox(slide, _L + Inches(0.14), content_top + Inches(0.10),
+                 method_w - Inches(0.28), Inches(0.32),
+                 text="COMMON METHOD", font_size=Pt(12), bold=True,
                  colour=T.ORANGE)
-        _textbox(slide, _L + Inches(0.12), content_top + Inches(0.42),
-                 method_w - Inches(0.24), content_h - Inches(0.52),
-                 text=method_text, font_size=Pt(12),
-                 colour=T.NAVY, word_wrap=True)
 
-        # Right — Worked example
-        _box(slide, right_x, content_top,
-             _CW - method_w - gap, content_h,
-             T.WHITE, border_colour=T.NAVY, border_pt=1.0)
-        _textbox(slide, right_x + Inches(0.15), content_top + Inches(0.15),
-                 _CW - method_w - gap - Inches(0.30), content_h - Inches(0.30),
-                 text=worked_example, font_size=Pt(15),
-                 colour=T.NAVY, word_wrap=True)
+        label_bottom = content_top + Inches(0.46)
+
+        if diagram:
+            # Embed diagram image, preserving natural aspect ratio within the panel
+            diag_w = method_w - Inches(0.24)
+            diag_h = Inches(2.20)
+            _embed_image(slide, diagram,
+                         _L + Inches(0.12), label_bottom,
+                         diag_w, diag_h)
+            text_top = label_bottom + diag_h + Inches(0.10)
+            text_h   = content_top + content_h - text_top - Inches(0.10)
+            if method_text and text_h > Inches(0.30):
+                _textbox(slide, _L + Inches(0.14), text_top,
+                         method_w - Inches(0.28), text_h,
+                         text=method_text, font_size=Pt(11),
+                         colour=T.NAVY, word_wrap=True)
+        else:
+            _textbox(slide, _L + Inches(0.14), label_bottom,
+                     method_w - Inches(0.28), content_h - Inches(0.56),
+                     text=method_text, font_size=Pt(12),
+                     colour=T.NAVY, word_wrap=True)
+
+        # Right — Worked example panel (rounded, white)
+        _rounded_box(slide, right_x, content_top,
+                     right_w, content_h,
+                     T.WHITE, border_colour=T.NAVY, border_pt=1.5,
+                     rounding=0.06)
+
+        # Parse the worked example into numbered steps using circle badges.
+        # Spacing is calibrated so the full sequence fits in 4.19" with Comic Sans:
+        #   body 0.30" · blank 0.08" · step 0.48" · in-general 0.52" → total ≈4.16"
+        lines = worked_example.strip().split("\n")
+        step_colours = [
+            RGBColor(0xF5, 0x9A, 0x1C),  # orange  — Step 1
+            RGBColor(0x17, 0xA5, 0x89),  # teal    — Step 2
+            RGBColor(0x5B, 0x2C, 0x8D),  # purple  — Step 3
+            RGBColor(0xE5, 0x00, 0x7D),  # pink    — Step 4
+        ]
+        step_num = 0
+        y_cursor = content_top + Inches(0.16)
+        circ_d   = Inches(0.36)
+        line_h   = Inches(0.26)   # reduced from 0.30 to keep full sequence in panel
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                y_cursor += Inches(0.08)   # tighter blank-line gap
+                continue
+            is_step = stripped.lower().startswith("step ")
+            if is_step and step_num < len(step_colours):
+                col = step_colours[step_num]
+                cx = right_x + Inches(0.30)
+                cy = y_cursor + circ_d / 2
+                _circle(slide, cx, cy, circ_d, col,
+                        text=str(step_num + 1), font_size=Pt(14))
+                _textbox(slide, right_x + Inches(0.72), y_cursor,
+                         right_w - Inches(0.84), line_h + Inches(0.10),
+                         text=stripped, font_size=Pt(14), bold=True,
+                         colour=col, word_wrap=True)
+                step_num += 1
+                y_cursor += line_h + Inches(0.12)
+            elif stripped.startswith("[") or stripped.startswith("("):
+                _textbox(slide, right_x + Inches(0.72), y_cursor,
+                         right_w - Inches(0.84), line_h,
+                         text=stripped, font_size=Pt(12), italic=True,
+                         colour=T.DARK_GREY, word_wrap=True)
+                y_cursor += Inches(0.22)
+            elif stripped.lower().startswith("in general"):
+                _rounded_box(slide, right_x + Inches(0.14),
+                             y_cursor + Inches(0.04),
+                             right_w - Inches(0.28), line_h + Inches(0.10),
+                             RGBColor(0xE8, 0xF8, 0xE8),
+                             text=stripped, text_colour=RGBColor(0x1E, 0x7A, 0x3C),
+                             font_size=Pt(13), bold=True,
+                             alignment=PP_ALIGN.LEFT, rounding=0.08)
+                y_cursor += line_h + Inches(0.18)
+            else:
+                _textbox(slide, right_x + Inches(0.18), y_cursor,
+                         right_w - Inches(0.30), line_h,
+                         text=stripped, font_size=Pt(13),
+                         colour=T.NAVY, word_wrap=True)
+                y_cursor += line_h + Inches(0.04)
     else:
-        # No method text — full-width worked example
-        _textbox(slide, _L, content_top, _CW, content_h,
-                 text=worked_example, font_size=Pt(17),
+        _rounded_box(slide, _L, content_top, _CW, content_h,
+                     T.WHITE, border_colour=T.NAVY, border_pt=1.5,
+                     rounding=0.06)
+        _textbox(slide, _L + Inches(0.18), content_top + Inches(0.15),
+                 _CW - Inches(0.36), content_h - Inches(0.30),
+                 text=worked_example, font_size=Pt(16),
                  colour=T.NAVY, word_wrap=True)
 
-    # Green answer bar
-    ans_top = _CT + Inches(5.55)
-    _box(slide, _L, ans_top, _CW, Inches(0.52),
-         RGBColor(0x1E, 0x7A, 0x4A),
-         text="Answer shown above — check your working",
-         text_colour=T.WHITE, font_size=Pt(14), bold=True)
+    # Green answer bar (rounded)
+    ans_top = _CT + Inches(5.25)
+    _rounded_box(slide, _L, ans_top, _CW, Inches(0.52),
+                 RGBColor(0x1E, 0x7A, 0x4A),
+                 text="Answer shown above — check your working",
+                 text_colour=T.WHITE, font_size=Pt(15), bold=True,
+                 rounding=0.08)
 
-    # Key-idea bar — teacher notes if provided, else generic prompt
+    # Navy key-idea bar
     key_idea = notes if notes else "Key idea:  show every step — method first, then substitute"
-    _box(slide, _L, ans_top + Inches(0.58), _CW, Inches(0.42),
-         T.NAVY, text=key_idea,
-         text_colour=T.CARD_YELLOW, font_size=Pt(12), bold=True)
+    _rounded_box(slide, _L, ans_top + Inches(0.57), _CW, Inches(0.44),
+                 T.NAVY, text=key_idea,
+                 text_colour=T.CARD_YELLOW, font_size=Pt(13), bold=True,
+                 rounding=0.08)
 
 
 def make_wedo_slide(prs: Presentation, topic_name: str,
@@ -548,26 +687,36 @@ def make_wedo_slide(prs: Presentation, topic_name: str,
     slide = _blank_slide(prs)
     _add_header(slide, "We do", heading, "We do", T.TEAL)
 
-    # Teacher note bar (thin lavender strip)
-    _box(slide, _L, _CT + Inches(0.05),
-         _CW, Inches(0.28),
-         T.PURPLE_LIGHT,
-         text=question,
-         text_colour=T.NAVY, font_size=Pt(11),
-         alignment=PP_ALIGN.LEFT)
+    # Teacher note bar (lavender strip below header)
+    note_h = Inches(0.30)
+    _rounded_box(slide, _L, _CT + Inches(0.04),
+                 _CW, note_h,
+                 T.PURPLE_LIGHT,
+                 text=question,
+                 text_colour=T.NAVY, font_size=Pt(12),
+                 alignment=PP_ALIGN.LEFT, rounding=0.05)
 
-    # 4-card grid (same layout as Starter)
     card_colours = [T.CARD_YELLOW, T.CARD_PEACH, T.CARD_GREEN, T.CARD_BLUE]
-    card_top_row = _CT + Inches(0.42)
-    card_bot_row = _CT + Inches(3.67)
-    positions = [
-        (_L,  card_top_row),
-        (_R2, card_top_row),
-        (_L,  card_bot_row),
-        (_R2, card_bot_row),
+    border_colours = [
+        RGBColor(0xD4, 0xC0, 0x50),
+        RGBColor(0xD4, 0xA0, 0x60),
+        RGBColor(0x70, 0xB8, 0x80),
+        RGBColor(0x70, 0xAA, 0xD0),
     ]
-    card_w = _COL
-    card_h = Inches(3.10)
+    card_icons = ["📝", "💡", "🎯", "⭐"]
+
+    CARD_W   = _COL
+    CARD_H   = Inches(2.95)
+    GAP      = Inches(0.15)
+    cards_top = _CT + Inches(0.42)
+
+    positions = [
+        (_L,  cards_top),
+        (_R2, cards_top),
+        (_L,  cards_top + CARD_H + GAP),
+        (_R2, cards_top + CARD_H + GAP),
+    ]
+
     steps = (scaffold_steps or [
         "Try it — show your working step by step.",
         "Check — does your answer make sense?",
@@ -575,25 +724,36 @@ def make_wedo_slide(prs: Presentation, topic_name: str,
         "Can you spot a pattern?",
     ])[:4]
 
-    for i, ((lft, top), colour) in enumerate(zip(positions, card_colours)):
-        _box(slide, lft, top, card_w, card_h,
-             colour, border_colour=colour, border_pt=2.0)
-        _textbox(slide, lft + Inches(0.12), top + Inches(0.10),
-                 Inches(0.50), Inches(0.35),
-                 text=f"{i + 1}.", font_size=Pt(16), bold=True, colour=T.NAVY)
+    for i, ((lft, top), colour, border) in enumerate(
+            zip(positions, card_colours, border_colours)):
+
+        _rounded_box(slide, lft, top, CARD_W, CARD_H,
+                     colour, border_colour=border, border_pt=2.0, rounding=0.06)
+
+        _textbox(slide, lft + Inches(0.14), top + Inches(0.10),
+                 Inches(0.45), Inches(0.42),
+                 text=f"{i + 1}.", font_size=Pt(20), bold=True, colour=T.NAVY)
+
+        _textbox(slide, lft + CARD_W - Inches(0.55), top + Inches(0.08),
+                 Inches(0.48), Inches(0.40),
+                 text=card_icons[i], font_size=Pt(20),
+                 alignment=PP_ALIGN.CENTER)
+
         step = steps[i] if i < len(steps) else ""
         _textbox(slide, lft + Inches(0.55), top + Inches(0.10),
-                 card_w - Inches(0.65), Inches(0.90),
-                 text=step, font_size=Pt(14), colour=T.NAVY, word_wrap=True)
-        _textbox(slide, lft + Inches(0.15), top + Inches(1.10),
-                 card_w - Inches(0.25), Inches(0.28),
-                 text="Working ...", font_size=Pt(11), italic=True,
-                 colour=RGBColor(0xC8, 0x8A, 0x00))
+                 CARD_W - Inches(1.10), Inches(0.90),
+                 text=step, font_size=Pt(15), colour=T.NAVY, word_wrap=True)
+
+        _textbox(slide, lft + Inches(0.16), top + Inches(1.08),
+                 CARD_W - Inches(0.32), Inches(0.28),
+                 text="Working ...", font_size=Pt(12), italic=True,
+                 colour=RGBColor(0xC8, 0x7A, 0x00))
+
         for line_n in range(3):
-            line_y = top + Inches(1.48) + line_n * Inches(0.50)
-            _box(slide, lft + Inches(0.15), line_y,
-                 card_w - Inches(0.30), Inches(0.02),
-                 RGBColor(0xAA, 0xAA, 0xAA))
+            line_y = top + Inches(1.46) + line_n * Inches(0.48)
+            _box(slide, lft + Inches(0.16), line_y,
+                 CARD_W - Inches(0.32), Inches(0.025),
+                 RGBColor(0xBB, 0xBB, 0xBB))
 
 
 def make_youdo_slide(prs: Presentation, topic_name: str,
@@ -603,26 +763,34 @@ def make_youdo_slide(prs: Presentation, topic_name: str,
     slide = _blank_slide(prs)
     _add_header(slide, "You do", heading, "You do", T.PURPLE)
 
-    # Teacher note bar
-    _box(slide, _L, _CT + Inches(0.05),
-         _CW, Inches(0.28),
-         T.PURPLE_LIGHT,
-         text=question,
-         text_colour=T.NAVY, font_size=Pt(11),
-         alignment=PP_ALIGN.LEFT)
+    note_h = Inches(0.30)
+    _rounded_box(slide, _L, _CT + Inches(0.04),
+                 _CW, note_h,
+                 T.PURPLE_LIGHT,
+                 text=question,
+                 text_colour=T.NAVY, font_size=Pt(12),
+                 alignment=PP_ALIGN.LEFT, rounding=0.05)
 
-    # 4-card grid
     card_colours = [T.CARD_YELLOW, T.CARD_PEACH, T.CARD_GREEN, T.CARD_BLUE]
-    card_top_row = _CT + Inches(0.42)
-    card_bot_row = _CT + Inches(3.67)
-    positions = [
-        (_L,  card_top_row),
-        (_R2, card_top_row),
-        (_L,  card_bot_row),
-        (_R2, card_bot_row),
+    border_colours = [
+        RGBColor(0xD4, 0xC0, 0x50),
+        RGBColor(0xD4, 0xA0, 0x60),
+        RGBColor(0x70, 0xB8, 0x80),
+        RGBColor(0x70, 0xAA, 0xD0),
     ]
-    card_w = _COL
-    card_h = Inches(3.10)
+    card_icons = ["📝", "💡", "🎯", "⭐"]
+
+    CARD_W    = _COL
+    CARD_H    = Inches(2.95)
+    GAP       = Inches(0.15)
+    cards_top = _CT + Inches(0.42)
+
+    positions = [
+        (_L,  cards_top),
+        (_R2, cards_top),
+        (_L,  cards_top + CARD_H + GAP),
+        (_R2, cards_top + CARD_H + GAP),
+    ]
     labels = [
         "Try this question on your own.",
         "Show all working clearly.",
@@ -630,24 +798,35 @@ def make_youdo_slide(prs: Presentation, topic_name: str,
         "Check — does it make sense?",
     ]
 
-    for i, ((lft, top), colour) in enumerate(zip(positions, card_colours)):
-        _box(slide, lft, top, card_w, card_h,
-             colour, border_colour=colour, border_pt=2.0)
-        _textbox(slide, lft + Inches(0.12), top + Inches(0.10),
-                 Inches(0.50), Inches(0.35),
-                 text=f"{i + 1}.", font_size=Pt(16), bold=True, colour=T.NAVY)
+    for i, ((lft, top), colour, border) in enumerate(
+            zip(positions, card_colours, border_colours)):
+
+        _rounded_box(slide, lft, top, CARD_W, CARD_H,
+                     colour, border_colour=border, border_pt=2.0, rounding=0.06)
+
+        _textbox(slide, lft + Inches(0.14), top + Inches(0.10),
+                 Inches(0.45), Inches(0.42),
+                 text=f"{i + 1}.", font_size=Pt(20), bold=True, colour=T.NAVY)
+
+        _textbox(slide, lft + CARD_W - Inches(0.55), top + Inches(0.08),
+                 Inches(0.48), Inches(0.40),
+                 text=card_icons[i], font_size=Pt(20),
+                 alignment=PP_ALIGN.CENTER)
+
         _textbox(slide, lft + Inches(0.55), top + Inches(0.10),
-                 card_w - Inches(0.65), Inches(0.90),
-                 text=labels[i], font_size=Pt(14), colour=T.NAVY, word_wrap=True)
-        _textbox(slide, lft + Inches(0.15), top + Inches(1.10),
-                 card_w - Inches(0.25), Inches(0.28),
-                 text="Working ...", font_size=Pt(11), italic=True,
-                 colour=RGBColor(0xC8, 0x8A, 0x00))
+                 CARD_W - Inches(1.10), Inches(0.90),
+                 text=labels[i], font_size=Pt(15), colour=T.NAVY, word_wrap=True)
+
+        _textbox(slide, lft + Inches(0.16), top + Inches(1.08),
+                 CARD_W - Inches(0.32), Inches(0.28),
+                 text="Working ...", font_size=Pt(12), italic=True,
+                 colour=RGBColor(0xC8, 0x7A, 0x00))
+
         for line_n in range(3):
-            line_y = top + Inches(1.48) + line_n * Inches(0.50)
-            _box(slide, lft + Inches(0.15), line_y,
-                 card_w - Inches(0.30), Inches(0.02),
-                 RGBColor(0xAA, 0xAA, 0xAA))
+            line_y = top + Inches(1.46) + line_n * Inches(0.48)
+            _box(slide, lft + Inches(0.16), line_y,
+                 CARD_W - Inches(0.32), Inches(0.025),
+                 RGBColor(0xBB, 0xBB, 0xBB))
 
     if answer:
         _textbox(slide, _L, _CT + _CH - Inches(0.35),
@@ -665,14 +844,14 @@ def make_mini_whiteboard(prs: Presentation, topic_name: str,
     counter = f"  {question_num}/{total}" if question_num else ""
     _add_header(slide, f"Mini Whiteboard{counter}")
 
-    _box(slide, _L, _CT + Inches(0.15),
-         _CW, Inches(5.90),
-         T.WHITE, text=question,
-         text_colour=T.NAVY, font_size=Pt(28),
-         alignment=PP_ALIGN.CENTER,
-         border_colour=T.TEAL, border_pt=2.5)
+    _rounded_box(slide, _L, _CT + Inches(0.12),
+                 _CW, Inches(5.85),
+                 T.WHITE, text=question,
+                 text_colour=T.NAVY, font_size=Pt(30),
+                 alignment=PP_ALIGN.CENTER,
+                 border_colour=T.TEAL, border_pt=3.0, rounding=0.05)
 
-    _textbox(slide, _L, _CT + Inches(6.20), _CW, Inches(0.35),
+    _textbox(slide, _L, _CT + Inches(6.10), _CW, Inches(0.35),
              text="Show me your answer on your mini whiteboard.",
              font_size=Pt(13), colour=T.DARK_GREY, italic=True,
              alignment=PP_ALIGN.CENTER)
@@ -736,26 +915,26 @@ def make_plenary(prs: Presentation, topic_name: str,
     slide = _blank_slide(prs)
     _add_header(slide, "Plenary", "", "Plenary", T.PURPLE)
 
-    _box(slide, _L, _CT + Inches(0.10),
-         _CW, Inches(1.70),
-         T.PURPLE_LIGHT, text=summary,
-         text_colour=T.NAVY, font_size=Pt(15),
-         alignment=PP_ALIGN.LEFT)
+    _rounded_box(slide, _L, _CT + Inches(0.10),
+                 _CW, Inches(1.65),
+                 T.PURPLE_LIGHT, text=summary,
+                 text_colour=T.NAVY, font_size=Pt(15),
+                 alignment=PP_ALIGN.LEFT, rounding=0.06)
 
-    _textbox(slide, _L, _CT + Inches(1.95),
+    _textbox(slide, _L, _CT + Inches(1.90),
              _CW, Inches(0.40),
              text="Now show me on your whiteboard:",
              font_size=Pt(16), bold=True, colour=T.NAVY)
 
-    _box(slide, _L, _CT + Inches(2.45),
-         _CW, Inches(3.50),
-         T.WHITE, text=question,
-         text_colour=T.NAVY, font_size=Pt(24),
-         alignment=PP_ALIGN.CENTER,
-         border_colour=T.PURPLE, border_pt=2.0)
+    _rounded_box(slide, _L, _CT + Inches(2.40),
+                 _CW, Inches(3.45),
+                 T.WHITE, text=question,
+                 text_colour=T.NAVY, font_size=Pt(26),
+                 alignment=PP_ALIGN.CENTER,
+                 border_colour=T.PURPLE, border_pt=2.5, rounding=0.06)
 
     if answer:
-        _textbox(slide, _L, _CT + Inches(6.05),
+        _textbox(slide, _L, _CT + Inches(5.95),
                  _CW, Inches(0.45),
                  text=f"Answer: {answer}",
                  font_size=Pt(12), colour=T.DARK_GREY, italic=True)

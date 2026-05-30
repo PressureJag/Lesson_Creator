@@ -30,10 +30,27 @@ from generator import module_selector, class_profile as cp
 
 # ── Diagram builder ──────────────────────────────────────────────────────────
 
-def build_diagram(obj_text: str, diagram_override=None):
+def build_diagram(obj_text: str, methods_text: str = "", diagram_override=None):
     """Generate an appropriate diagram image, or return None."""
     from generator import content_gen as cg
     dtype = diagram_override or cg.select_diagram_type(obj_text)
+
+    # Detect ratio-table methodology from methods_text keyword hints
+    mt_lower = methods_text.lower()
+    if dtype == "percentage_bar" and any(
+        w in mt_lower for w in ["ratio table", "÷", "divide by the decimal", "unitary"]
+    ):
+        return diagram_gen.ratio_table(
+            "Part%", "Part value",
+            "100%", "Whole",
+            "÷ decimal",
+            title="Find the whole",
+        )
+    if dtype == "percentage_bar" and "×" in mt_lower:
+        return diagram_gen.arrow_flow(
+            "Amount", "× multiplier", "Result",
+            title="Percentage change",
+        )
 
     if dtype == "percentage_bar":
         return diagram_gen.percentage_bar(
@@ -176,12 +193,14 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
         teaching = content_gen.generate_teaching_sequence(
             obj, topic_name, methods_text, vocab, obj_misconc
         )
+        ido_diagram = build_diagram(obj, methods_text)
         slide_builder.make_ido_slide(
             prs, topic_name,
             teaching["i_do"]["heading"],
             teaching["i_do"]["worked_example"],
             method_text=methods_text,
             notes=teaching["i_do"].get("notes", ""),
+            diagram=ido_diagram,
         )
         slide_builder.make_wedo_slide(
             prs, topic_name,

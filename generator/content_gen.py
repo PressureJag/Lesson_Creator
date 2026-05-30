@@ -15,22 +15,14 @@ def set_class_profile(profile: dict) -> None:
 
 def _build_system_prompt() -> str:
     base = (
-        "You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.\n"
-        "You write maths lesson content for secondary school students in England (ages 11–16).\n\n"
-        "Rules you always follow:\n"
-        "- ALL maths must be correct — verify every calculation before writing it\n"
-        "- Use plain-text notation: x^2, sqrt(x), fractions as a/b, × for multiply\n"
-        "- Apply variation theory: vary ONE feature at a time across question sets\n"
-        "- Fluency → Reasoning → Problem Solving arc in practice questions\n"
-        "- Write for the specific objective given — never write generic filler content\n"
-        "- Worked examples must use REAL specific numbers, not placeholders like 'X' or 'a value'\n"
+        "UK secondary maths teacher, Outwood Grange Academies Trust. "
+        "Rules: all maths correct (verify every calculation); plain-text notation (x^2, sqrt, a/b, ×); "
+        "vary ONE feature at a time; Fluency→Reasoning→Problem Solving arc; specific numbers not placeholders."
     )
     if _class_profile:
         base += (
-            f"\nCLASS PROFILE: {_class_profile.get('label', '')}\n"
-            f"PITCH GUIDANCE: {_class_profile.get('pitch_guidance', '')}\n"
-            "You MUST follow the pitch guidance above when choosing example difficulty, "
-            "scaffolding level, notation complexity, and question range.\n"
+            f"\nClass: {_class_profile.get('label', '')}. "
+            f"Pitch: {_class_profile.get('pitch_guidance', '')} — apply to difficulty, scaffolding, notation."
         )
     return base
 
@@ -182,13 +174,12 @@ def _call(prompt: str, max_tokens: int = 800,
     return data.get("result", "").strip()
 
 
-def _call_json(prompt: str, schema: dict, max_tokens: int = 1500,
+def _call_json(prompt: str, schema: dict = None, max_tokens: int = 1500,
                model: str = "claude-opus-4-8") -> dict:
     """Call the local claude CLI and parse a JSON response."""
-    json_instruction = (
-        "\n\nReturn ONLY valid JSON — no markdown fences, no explanation. "
-        f"Match this schema exactly:\n{json.dumps(schema)}"
-    )
+    json_instruction = "\n\nReturn ONLY valid JSON — no markdown fences, no explanation."
+    if schema:
+        json_instruction += f"\nSchema: {json.dumps(schema)}"
     text = _call(prompt + json_instruction, max_tokens=max_tokens, model=model)
     # Strip accidental code fences
     if "```" in text:
@@ -451,21 +442,16 @@ def generate_retrieval_questions(prior_knowledge: list,
     if _demo_mode:
         return _stub_retrieval(prior_knowledge)
 
-    pk = "\n".join(f"- {p}" for p in prior_knowledge[:6])
-    vocab_str = ""
-    if vocabulary:
-        vocab_str = f"\n\nKey vocabulary for this topic: {', '.join(vocabulary[:8])}"
+    pk = "; ".join(prior_knowledge[:5])
+    vocab_str = (f"\nVocabulary: {', '.join(vocabulary[:6])}" if vocabulary else "")
 
     prompt = (
-        f"Topic: {topic}\nObjective being taught next: {objective}\n\n"
-        f"Prior knowledge students should have:\n{pk}{vocab_str}\n\n"
-        "Write exactly 4 retrieval starter questions that test this prior knowledge.\n"
-        "Each question must be answerable in 1–2 minutes (warm-up pace).\n"
-        "Include a mix of recall, short calculation, and application. "
-        "All maths must be correct with specific numbers, not variables.\n\n"
-        "Return JSON with keys: questions (array of 4 strings), answers (array of 4 strings)."
+        f"Topic: {topic}\nObjective: {objective}\nPrior knowledge: {pk}{vocab_str}\n\n"
+        "Write 4 retrieval starter questions testing prior knowledge. "
+        "Mix recall, short calculation, and application. All maths correct with specific numbers.\n"
+        "JSON: {\"questions\": [4 strings], \"answers\": [4 strings]}"
     )
-    return _call_json(prompt, _SCHEMA_RETRIEVAL, max_tokens=800, model="claude-haiku-4-5-20251001")
+    return _call_json(prompt, max_tokens=600, model="claude-haiku-4-5-20251001")
 
 
 def generate_hook(objective: str, topic: str,
@@ -685,40 +671,28 @@ def generate_teaching_sequence(objective: str, topic: str,
         return _stub_teaching_seq(objective, methods_text)
 
     extra = (
-        f"\n\nMANDATORY TEACHING METHOD — from the school's Common Methods document.\n"
-        f"You MUST use this exact method and representation in your worked example.\n"
-        f"Do not invent a different approach or substitute an equivalent method:\n\n"
-        f"{methods_text}"
+        f"\n\nMandatory method (Common Methods doc) — use this exact approach, not an equivalent:\n{methods_text}"
         if methods_text else ""
     )
-    vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:8])}" if vocabulary else "")
-    misconc_str = (f"\n\nCommon misconception to address: {misconceptions[0]}"
-                   if misconceptions else "")
+    vocab_str = (f"\nVocabulary: {', '.join(vocabulary[:6])}" if vocabulary else "")
+    misconc_str = (f"\nMisconception to address: {misconceptions[0]}" if misconceptions else "")
 
     prompt = (
         f"Topic: {topic}\nObjective: {objective}{extra}{vocab_str}{misconc_str}\n\n"
-        "Write three connected teaching slides for this objective, using NEAR-VARIATION:\n\n"
-        "I DO (teacher demonstration):\n"
-        "- ONE specific numerical worked example (e.g. 'Find 35% of 240', not abstract)\n"
-        "- CRITICAL: your worked example MUST mirror the exact representation shown in the "
-        "MANDATORY TEACHING METHOD above — use the same structure, notation, and steps. "
-        "Do not substitute a different method even if it would also be valid.\n"
-        "- Show EVERY line of working; after each step add [why] in brackets\n"
-        "- End with: 'In general: [method in one sentence]'\n"
-        "- heading: 5–8 words; notes: 1–2 sentences on key emphasis and common error\n\n"
-        "WE DO (class does together — near-variation of I Do, same method, new numbers):\n"
-        "- heading: 4–6 words\n"
-        "- question: specific problem with real numbers (NOT the same as I Do)\n"
-        "- steps: exactly 4 method-specific scaffold prompts (no answers, just guiding questions)\n"
-        "- answer: full step-by-step worked solution\n\n"
-        "YOU DO (student solo — another near-variation, same method, new numbers again):\n"
-        "- heading: 4–6 words\n"
-        "- question: specific problem with real numbers (NOT same as I Do or We Do)\n"
-        "- answer: concise answer with working shown\n\n"
-        "All maths must be correct. Vary ONE feature at a time across the three questions.\n\n"
-        "Return JSON with keys: i_do, we_do, you_do (each as specified above)."
+        "Write I Do / We Do / You Do slides using near-variation (same method, one feature changes each time).\n\n"
+        "I DO: one specific numbered worked example; every working line shown; "
+        "[why] after each step; end 'In general: ...'; "
+        "heading 5–8 words; notes 1–2 sentences on emphasis and common error.\n\n"
+        "WE DO: near-variation (same method, new numbers); heading 4–6 words; "
+        "question with specific numbers; steps: 4 method-specific scaffold prompts (no answers); "
+        "answer: full worked solution.\n\n"
+        "YOU DO: another near-variation; heading 4–6 words; question; answer with working.\n\n"
+        "All maths correct. "
+        "JSON: {\"i_do\": {\"heading\": str, \"worked_example\": str, \"notes\": str}, "
+        "\"we_do\": {\"heading\": str, \"question\": str, \"steps\": [4 strings], \"answer\": str}, "
+        "\"you_do\": {\"heading\": str, \"question\": str, \"answer\": str}}"
     )
-    return _call_json(prompt, _SCHEMA_TEACHING_SEQ, max_tokens=2000, model="claude-opus-4-8")
+    return _call_json(prompt, max_tokens=2000, model="claude-opus-4-8")
 
 
 def generate_mini_whiteboard_questions(objective: str, topic: str,
@@ -727,27 +701,16 @@ def generate_mini_whiteboard_questions(objective: str, topic: str,
     if _demo_mode:
         return _stub_mini_wb(objective)
 
-    extra = (
-        f"\n\nMANDATORY METHOD — all questions must reflect this approach from the school's "
-        f"Common Methods document:\n\n{methods_text}"
-        if methods_text else ""
-    )
+    extra = (f"\nMethod: {methods_text}" if methods_text else "")
 
     prompt = (
         f"Topic: {topic}\nObjective: {objective}{extra}\n\n"
-        "Write exactly 10 mini whiteboard questions for this objective.\n\n"
-        "Rules:\n"
-        "- All 10 questions use the SAME method as the I Do worked example\n"
-        "- Apply variation theory: vary ONE feature at a time (integer→decimal→fraction→negative, "
-        "1-step→2-step, given value→find missing, etc.)\n"
-        "- Questions 1–4: fluency (increasing complexity, one change per question)\n"
-        "- Questions 5–7: reasoning (context, reverse, comparison)\n"
-        "- Questions 8–10: problem solving (non-routine, two-step, generalise)\n"
-        "- Every question fits on a single line — short and punchy\n"
-        "- ALL maths correct with specific numbers\n\n"
-        "Return JSON: questions (array of 10 strings), answers (array of 10 strings)."
+        "Write 10 mini whiteboard questions using variation theory (one feature change per question). "
+        "Q1–4: fluency (increasing complexity). Q5–7: reasoning (context, reverse, comparison). "
+        "Q8–10: problem solving. Each fits on one line. All maths correct with specific numbers.\n"
+        "JSON: {\"questions\": [10 strings], \"answers\": [10 strings]}"
     )
-    return _call_json(prompt, _SCHEMA_MINI_WB, max_tokens=1200, model="claude-haiku-4-5-20251001")
+    return _call_json(prompt, max_tokens=1000, model="claude-haiku-4-5-20251001")
 
 
 def generate_independent_practice(objective: str, topic: str,
@@ -757,32 +720,19 @@ def generate_independent_practice(objective: str, topic: str,
     if _demo_mode:
         return _stub_indep_practice(objective)
 
-    vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:8])}" if vocabulary else "")
-    extra = (
-        f"\n\nMANDATORY METHOD — questions must reflect this approach from the school's "
-        f"Common Methods document:\n\n{methods_text}"
-        if methods_text else ""
-    )
+    vocab_str = (f"\nVocabulary: {', '.join(vocabulary[:6])}" if vocabulary else "")
+    extra = (f"\nMethod: {methods_text}" if methods_text else "")
 
     prompt = (
         f"Topic: {topic}\nObjective: {objective}{vocab_str}{extra}\n\n"
-        "Write exactly 10 independent practice questions using VARIATION THEORY.\n\n"
-        "Structure (one change per question):\n"
-        "1. Simplest case — integer values, single step\n"
-        "2. Same — vary one feature (e.g. decimal)\n"
-        "3. Same — vary another feature (e.g. negative)\n"
-        "4. Same — vary another feature (e.g. fraction or reversed)\n"
-        "5. Same — add one more step\n"
-        "6. Context: single-step real-world scenario\n"
-        "7. Context: multi-step or embedded decision\n"
-        "8. Comparison or justification question\n"
-        "9. Non-routine — student decides method\n"
-        "10. Generalise or find all solutions\n\n"
-        "Style must match the I Do / We Do / You Do questions.\n"
-        "All maths correct. Each question fits on one line.\n\n"
-        "Return JSON: questions (array of 10 strings), answers (array of 10 strings)."
+        "Write 10 independent practice questions using variation theory (one change per question):\n"
+        "1. Simplest (integer, 1-step)  2. decimal  3. negative  4. fraction/reversed  5. +1 step\n"
+        "6. Real-world single-step  7. Multi-step context  8. Comparison/justification\n"
+        "9. Non-routine (student decides method)  10. Generalise/find all solutions\n"
+        "Style matches I Do/We Do/You Do. All maths correct. Each fits on one line.\n"
+        "JSON: {\"questions\": [10 strings], \"answers\": [10 strings]}"
     )
-    return _call_json(prompt, _SCHEMA_INDEP_PRACTICE, max_tokens=1800, model="claude-sonnet-4-6")
+    return _call_json(prompt, max_tokens=1200, model="claude-haiku-4-5-20251001")
 
 
 def generate_plenary(objective: str, topic: str) -> dict:
@@ -792,14 +742,9 @@ def generate_plenary(objective: str, topic: str) -> dict:
 
     prompt = (
         f"Topic: {topic}\nObjective: {objective}\n\n"
-        "Write a plenary for this objective.\n\n"
-        "summary: 2–3 sentences explaining what was learned in this lesson — "
-        "use past tense ('we have learned...'), name the key method or rule, "
-        "and connect to where this skill is used next.\n\n"
-        "question: ONE final mini whiteboard question that proves the student has achieved "
-        "this objective. Must use specific numbers. Short — fits on a whiteboard.\n\n"
-        "answer: the correct answer to that question (with brief working if needed).\n\n"
-        "All maths correct.\n\n"
-        "Return JSON: summary (string), question (string), answer (string)."
+        "Write a plenary: summary (2–3 sentences past tense, names key method, connects to next lesson); "
+        "question (one final mini-whiteboard check with specific numbers, short); "
+        "answer (correct answer with brief working).\n"
+        "All maths correct. JSON: {\"summary\": str, \"question\": str, \"answer\": str}"
     )
-    return _call_json(prompt, _SCHEMA_PLENARY, max_tokens=500, model="claude-haiku-4-5-20251001")
+    return _call_json(prompt, max_tokens=400, model="claude-haiku-4-5-20251001")

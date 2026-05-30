@@ -47,11 +47,18 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 
 - [x] **Content generation overhaul** — `content_gen.py` now uses:
   - Structured outputs (`output_config.format` + JSON schemas) — no more fragile regex parsing
-  - Cached system prompt (`cache_control: ephemeral`) shared across all calls in a session
-  - `claude-opus-4-8` for accuracy-critical content (worked examples, practice questions, We Do)
-  - `claude-sonnet-4-6` for contextual content (hooks, retrieval, reasoning, WSWT)
+  - `claude-opus-4-8` for accuracy-critical content (worked examples, We Do via teaching_sequence)
+  - `claude-haiku-4-5` for formulaic content (retrieval, MWB, independent practice, plenary)
   - Vocabulary and misconceptions threaded into generation prompts for SoW alignment
   - Content JSON export saved alongside PPTX (`Output/<topic>_content.json`) for review
+
+- [x] **Token reduction pass** — ~1,750 fewer input tokens per objective (~8,750 for a 5-obj deck):
+  - System prompt compressed from ~150 to ~40 tokens (billed on every call)
+  - JSON schema objects removed from the 5 live `_call_json` calls (~650 tokens saved)
+  - All 5 active prompts tightened with inline key descriptions instead of verbose bullet blocks
+  - `generate_independent_practice` downgraded Sonnet→Haiku (formulaic variation task)
+  - Max-token budgets right-sized: retrieval 800→600, MWB 1200→1000, IP 1800→1200, plenary 500→400
+  - Methodology diagrams now wired into `build_deck` I Do slides (`build_diagram` called per objective)
 
 - [ ] **Maths-specific enhancements** — further improvements to consider:
   - Fraction / ratio bar models as a default diagram type for proportion topics

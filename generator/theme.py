@@ -23,17 +23,17 @@ RED          = RGBColor(0xCC, 0x00, 0x00)   # Retrieval badge
 DARK_RED     = RGBColor(0x7B, 0x1F, 0x1F)   # Spot the Mistake badge
 
 # ── 4-card question-card fills ────────────────────────────────────────────────
-CARD_YELLOW  = RGBColor(0xFF, 0xE5, 0x90)   # Q1 top-left
-CARD_PEACH   = RGBColor(0xFF, 0xCA, 0xA0)   # Q2 top-right
-CARD_GREEN   = RGBColor(0xB5, 0xE0, 0xC8)   # Q3 bottom-left
-CARD_BLUE    = RGBColor(0xB5, 0xD8, 0xF0)   # Q4 bottom-right
+CARD_YELLOW  = RGBColor(0xFF, 0xF0, 0x80)   # Q1 top-left   (bright lemon)
+CARD_PEACH   = RGBColor(0xFF, 0xCC, 0x99)   # Q2 top-right  (warm peach)
+CARD_GREEN   = RGBColor(0xA8, 0xE0, 0xB8)   # Q3 bottom-left (mint green)
+CARD_BLUE    = RGBColor(0xA8, 0xD8, 0xF5)   # Q4 bottom-right (powder blue)
 
 # ── Typography ────────────────────────────────────────────────────────────────
-FONT_NAME    = "Calibri"
-TITLE_SIZE   = Pt(28)
-HEADING_SIZE = Pt(20)
-BODY_SIZE    = Pt(16)
-SMALL_SIZE   = Pt(13)
+FONT_NAME    = "Comic Sans MS"
+TITLE_SIZE   = Pt(30)
+HEADING_SIZE = Pt(22)
+BODY_SIZE    = Pt(18)
+SMALL_SIZE   = Pt(14)
 
 # ── Logo path (retained for future use) ───────────────────────────────────────
 LOGO_PATH = os.path.join(os.path.dirname(__file__), "..", "assets", "outwood_logo.png")
