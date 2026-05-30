@@ -17,7 +17,9 @@
 
 ## Intro slides (before all objective blocks)
 
-Title → Prior Knowledge → Vocabulary  (`make_title_slide`, `make_prior_knowledge`, `make_vocabulary`)
+Title → Big Picture → Prior Knowledge → Vocabulary  (`make_title_slide`, `make_overview_slide`, `make_prior_knowledge`, `make_vocabulary`)
+
+`make_overview_slide(prs, topic_name, prior_points, objectives, future_points)` — three-column map: Prior Knowledge (peach) → current module objectives (yellow) → Future Learning (green), with arrows between columns.
 
 ## Slide counts
 

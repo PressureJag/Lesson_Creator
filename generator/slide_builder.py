@@ -227,6 +227,70 @@ def make_title_slide(prs: Presentation, topic_name: str,
              alignment=PP_ALIGN.CENTER)
 
 
+def make_overview_slide(prs: Presentation, topic_name: str,
+                        prior_points: list[str], objectives: list[str],
+                        future_points: list[str]) -> None:
+    """Big Picture — three-column map showing where this module sits in the learning journey."""
+    slide = _blank_slide(prs)
+    _add_header(slide, "Big Picture",
+                f"Where {topic_name} fits in your learning journey")
+
+    col_top = _CT + Inches(0.15)
+    col_h   = _CH - Inches(0.20)
+    side_w  = Inches(2.60)
+    mid_w   = Inches(6.40)
+    arrow_w = Inches(0.40)
+
+    left_x  = _L
+    arr1_x  = left_x + side_w
+    mid_x   = arr1_x + arrow_w
+    arr2_x  = mid_x + mid_w
+    right_x = arr2_x + arrow_w
+    arrow_y = col_top + Inches(1.5)
+
+    # Left — Prior Knowledge
+    _box(slide, left_x, col_top, side_w, col_h,
+         T.CARD_PEACH, border_colour=T.NAVY, border_pt=1.5)
+    _textbox(slide, left_x + Inches(0.12), col_top + Inches(0.10),
+             side_w - Inches(0.24), Inches(0.40),
+             text="Prior Knowledge", font_size=Pt(13), bold=True, colour=T.NAVY)
+    prior_text = "\n".join(f"• {p}" for p in prior_points[:5])
+    _textbox(slide, left_x + Inches(0.12), col_top + Inches(0.55),
+             side_w - Inches(0.24), col_h - Inches(0.65),
+             text=prior_text, font_size=Pt(10), colour=T.NAVY, word_wrap=True)
+
+    # Arrows
+    _textbox(slide, arr1_x, arrow_y, arrow_w, Inches(0.35),
+             text="→", font_size=Pt(22), bold=True, colour=T.NAVY,
+             alignment=PP_ALIGN.CENTER)
+    _textbox(slide, arr2_x, arrow_y, arrow_w, Inches(0.35),
+             text="→", font_size=Pt(22), bold=True, colour=T.NAVY,
+             alignment=PP_ALIGN.CENTER)
+
+    # Middle — Current Module objectives
+    _box(slide, mid_x, col_top, mid_w, col_h,
+         T.YELLOW_BG, border_colour=T.NAVY, border_pt=2.0)
+    _textbox(slide, mid_x + Inches(0.15), col_top + Inches(0.10),
+             mid_w - Inches(0.30), Inches(0.50),
+             text=topic_name, font_size=Pt(15), bold=True,
+             colour=T.NAVY, alignment=PP_ALIGN.CENTER)
+    obj_text = "\n".join(f"{i + 1}.  {o}" for i, o in enumerate(objectives))
+    _textbox(slide, mid_x + Inches(0.15), col_top + Inches(0.72),
+             mid_w - Inches(0.30), col_h - Inches(0.82),
+             text=obj_text, font_size=Pt(11), colour=T.NAVY, word_wrap=True)
+
+    # Right — Future Learning
+    _box(slide, right_x, col_top, side_w, col_h,
+         T.CARD_GREEN, border_colour=T.NAVY, border_pt=1.5)
+    _textbox(slide, right_x + Inches(0.12), col_top + Inches(0.10),
+             side_w - Inches(0.24), Inches(0.40),
+             text="Future Learning", font_size=Pt(13), bold=True, colour=T.NAVY)
+    future_text = "\n".join(f"• {f}" for f in future_points[:5])
+    _textbox(slide, right_x + Inches(0.12), col_top + Inches(0.55),
+             side_w - Inches(0.24), col_h - Inches(0.65),
+             text=future_text, font_size=Pt(10), colour=T.NAVY, word_wrap=True)
+
+
 def make_prior_knowledge(prs: Presentation, topic_name: str,
                          prior: list[str]) -> None:
     """Prior knowledge recap slide."""
@@ -299,7 +363,13 @@ def make_starter_plus(prs: Presentation, topic_name: str,
 
         body = q_list[i]
         if is_answers and i < len(answers) and a_list[i]:
-            answer_colour = RGBColor(0xCC, 0x33, 0x00)
+            _answer_colours = [
+                RGBColor(0xC0, 0x39, 0x2B),  # Q1 red
+                RGBColor(0x1E, 0x5B, 0xB8),  # Q2 blue
+                RGBColor(0x2E, 0x8B, 0x57),  # Q3 green
+                RGBColor(0x8E, 0x44, 0xAD),  # Q4 purple
+            ]
+            answer_colour = _answer_colours[i % len(_answer_colours)]
             # Question text
             _textbox(slide, lft + Inches(0.55), top + Inches(0.10),
                      card_w - Inches(0.65), Inches(0.75),

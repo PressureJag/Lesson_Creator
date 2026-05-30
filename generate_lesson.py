@@ -100,6 +100,14 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
     notify("Building title slide …", "progress")
     slide_builder.make_title_slide(prs, topic_name, big_q, hours)
 
+    notify("Building overview (Big Picture) slide …", "progress")
+    slide_builder.make_overview_slide(
+        prs, topic_name,
+        sow.get("prior_knowledge", []),
+        objectives,
+        sow.get("future_knowledge", []),
+    )
+
     notify("Building prior knowledge slide …", "progress")
     slide_builder.make_prior_knowledge(prs, topic_name, prior)
 
