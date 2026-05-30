@@ -36,18 +36,6 @@ A live document tracking outstanding work. Updated as new tasks are identified.
     --topic "Algebra 1 Core Plus"
   ```
 
----
-
-## 🟡 Before First Real Use
-
-- [x] **"I Do, We Do, You Do" structure** — implemented. Each objective block now has:
-  - *I Do*: `make_teaching_text` with purple badge + optional diagram slide
-  - *We Do*: `make_we_do` (scaffold with 4 step boxes) + `make_we_do` answers slide (teal badge)
-  - *You Do*: `make_practice` with orange badge + answers slide
-  Slide count: 71 slides for 5 objectives (was 61).
-
-- [ ] **Answer slide for every practice slide** — ensure every slide that presents questions (We Do, You Do, retrieval starter) is immediately followed by a dedicated answers slide. Currently only the main practice and retrieval starters have answer pairs — We Do answers are missing.
-
 - [ ] **Maths-specific enhancements** — review the tool against common secondary maths topics and consider adding:
   - Fraction / ratio bar models as a default diagram type for proportion topics
   - Algebraic notation rendering (e.g. proper superscript for powers)
@@ -111,6 +99,7 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 - [x] Methods text matching fixed — now index-based before keyword fallback
 - [x] Fixed `lines` NameError crash in `sow_parser.py`
 - [x] I Do / We Do / You Do structure — phase badges (purple/teal/orange), We Do scaffold + answers slides
+- [x] Answer slides for all question types — retrieval answers, We Do answers, You Do answers all follow immediately
 - [x] `requirements.txt` added
 - [x] `CLAUDE.md` written with full project context
 - [x] Pushed to GitHub: `github.com/PressureJag/Lesson_Creator`
