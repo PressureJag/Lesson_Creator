@@ -140,106 +140,83 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
             notify(f"Skipping objective {idx}/{total}", "warning")
             continue
 
-        diagram_override = chosen.get("diagram")
-
         # ── Build slides for this objective ───────────────────
         notify(f"Objective {idx}/{total}: {obj[:55]} …", "section")
 
-        # Misconception for this objective (if available)
         obj_misconc = [misconcs[idx - 1]] if idx <= len(misconcs) else []
 
+        # 1 & 2 — Starter + Answers (plus layout)
         notify("Generating retrieval starter …", "progress")
         retrieval = content_gen.generate_retrieval_questions(prior, obj, topic_name, vocab)
-        slide_builder.make_retrieval_starter(prs, topic_name, retrieval["questions"])
-        slide_builder.make_retrieval_starter(
-            prs, topic_name, retrieval["questions"],
-            answers=True, answer_list=retrieval["answers"]
+        slide_builder.make_starter_plus(prs, topic_name, retrieval["questions"])
+        slide_builder.make_starter_plus(
+            prs, topic_name,
+            retrieval["questions"], retrieval["answers"]
         )
 
-        slide_builder.make_section_divider(prs, topic_name, idx, obj)
-        slide_builder.make_learning_objective(prs, topic_name, obj, idx)
+        # 3 — Learning Objective / Intro
+        slide_builder.make_learning_intro(prs, topic_name, obj, idx)
 
-        notify("Generating hook …", "progress")
-        hook = content_gen.generate_hook(obj, topic_name, pd_)
-        slide_builder.make_hook(prs, topic_name, hook, obj)
-
-        # I Do
-        notify("Generating worked example (I Do) …", "progress")
-        worked = content_gen.generate_worked_example(
+        # 4, 5, 6 — I Do / We Do / You Do
+        notify("Generating I Do / We Do / You Do sequence …", "progress")
+        teaching = content_gen.generate_teaching_sequence(
             obj, topic_name, methods_text, vocab, obj_misconc
         )
-        slide_builder.make_teaching_text(
+        slide_builder.make_ido_slide(
             prs, topic_name,
-            worked["heading"], worked["example"], worked.get("notes", ""),
-            phase="I Do"
+            teaching["i_do"]["heading"],
+            teaching["i_do"]["worked_example"],
+            teaching["i_do"].get("notes", ""),
+        )
+        slide_builder.make_wedo_slide(
+            prs, topic_name,
+            teaching["we_do"]["heading"],
+            teaching["we_do"]["question"],
+            teaching["we_do"].get("steps"),
+        )
+        slide_builder.make_youdo_slide(
+            prs, topic_name,
+            teaching["you_do"]["heading"],
+            teaching["you_do"]["question"],
+            teaching["you_do"].get("answer", ""),
         )
 
-        diag = build_diagram(obj, diagram_override)
-        if diag:
-            notify("Adding visual diagram (I Do) …", "progress")
-            slide_builder.make_teaching_visual(
-                prs, topic_name,
-                worked["heading"], diag,
-                right_text=worked["example"][:300],
-                phase="I Do"
-            )
+        # 7–16 — Mini Whiteboard × 10
+        notify("Generating mini whiteboard questions …", "progress")
+        wb = content_gen.generate_mini_whiteboard_questions(obj, topic_name, methods_text)
+        for wb_num, wb_q in enumerate(wb["questions"][:10], start=1):
+            slide_builder.make_mini_whiteboard(prs, topic_name, wb_q, wb_num, 10)
 
-        # We Do
-        notify("Generating guided practice (We Do) …", "progress")
-        we_do = content_gen.generate_we_do(obj, topic_name, methods_text, vocab)
-        slide_builder.make_we_do(prs, topic_name, we_do, answers=False)
-        slide_builder.make_we_do(prs, topic_name, we_do, answers=True)
-
-        # WSWT
-        notify("Generating What's the Same / What's Different …", "progress")
-        wswt = content_gen.generate_wswt_pair(obj, topic_name, vocab)
-        slide_builder.make_wswt(prs, topic_name, wswt["pair_a"], wswt["pair_b"])
-
-        # You Do
-        notify("Generating practice questions (You Do) …", "progress")
-        practice = content_gen.generate_practice_questions(obj, topic_name, vocab, obj_misconc)
-        qs  = practice["questions"]
-        ans = practice["answers"]
-        slide_builder.make_practice(
-            prs, topic_name,
-            f"Practice — {obj[:50]}",
-            qs[:6], two_column=True, phase="You Do"
+        # 17 & 18 — Independent Practice + Answers
+        notify("Generating independent practice …", "progress")
+        indep = content_gen.generate_independent_practice(
+            obj, topic_name, vocab, methods_text
         )
-        slide_builder.make_answers(
-            prs, topic_name,
-            f"Practice — {obj[:50]}",
-            list(zip(qs[:6], ans[:6]))
+        slide_builder.make_independent_practice(prs, topic_name, indep["questions"])
+        slide_builder.make_independent_answers(
+            prs, topic_name, indep["questions"], indep["answers"]
         )
 
-        # Reasoning
-        task_type = "asn" if idx % 2 == 1 else "open"
-        notify(f"Generating reasoning task ({task_type}) …", "progress")
-        reasoning = content_gen.generate_reasoning_task(obj, topic_name, task_type)
-        slide_builder.make_reasoning(prs, topic_name, reasoning, task_type)
-
-        # Misconception
-        if obj_misconc:
-            slide_builder.make_misconception(
-                prs, topic_name,
-                obj_misconc[0],
-                f"Remember: {obj_misconc[0].split('.')[0]} — check your working carefully."
-            )
+        # 19 — Plenary
+        notify("Generating plenary …", "progress")
+        plenary = content_gen.generate_plenary(obj, topic_name)
+        slide_builder.make_plenary(
+            prs, topic_name, obj,
+            plenary["summary"], plenary["question"], plenary.get("answer", ""),
+        )
 
         notify(f"Objective {idx}/{total} complete  ({len(prs.slides)} slides so far)", "success")
 
         # ── Log content for JSON export ───────────────────────
         content_log["objectives"].append({
-            "index": idx,
-            "objective": obj,
-            "retrieval": retrieval,
-            "hook": hook,
-            "worked_example": worked,
-            "we_do": we_do,
-            "wswt": wswt,
-            "practice": practice,
-            "reasoning": reasoning,
-            "reasoning_type": task_type,
-            "misconception": obj_misconc[0] if obj_misconc else None,
+            "index":             idx,
+            "objective":         obj,
+            "retrieval":         retrieval,
+            "teaching_sequence": teaching,
+            "mini_whiteboard":   wb,
+            "independent":       indep,
+            "plenary":           plenary,
+            "misconception":     obj_misconc[0] if obj_misconc else None,
         })
 
         # ── Between-objective checkpoint ──────────────────────

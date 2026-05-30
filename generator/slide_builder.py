@@ -122,15 +122,20 @@ def _textbox(slide, left, top, width, height,
 
 def _coloured_box(slide, left, top, width, height, fill_colour, text="",
                   text_colour=None, font_size=None, bold=False,
-                  alignment=PP_ALIGN.CENTER):
-    """Add a filled rectangle with optional centred text."""
+                  alignment=PP_ALIGN.CENTER, border_colour=None,
+                  border_pt=1.5):
+    """Add a filled rectangle with optional centred text and optional border."""
     shape = slide.shapes.add_shape(
         1,  # MSO_SHAPE_TYPE.RECTANGLE
         left, top, width, height
     )
     shape.fill.solid()
     shape.fill.fore_color.rgb = fill_colour
-    shape.line.fill.background()
+    if border_colour:
+        shape.line.color.rgb = border_colour
+        shape.line.width = Pt(border_pt)
+    else:
+        shape.line.fill.background()
 
     if text:
         tf = shape.text_frame
@@ -580,3 +585,351 @@ def make_extension(prs: Presentation, topic_name: str,
                   RGBColor(0xFF, 0xF8, 0xE7),
                   text=text, text_colour=T.BLACK,
                   font_size=Pt(16), alignment=PP_ALIGN.LEFT)
+
+
+# ─────────────────────────────────────────────
+#  New structured slide sequence (2025 overhaul)
+# ─────────────────────────────────────────────
+
+def make_starter_plus(prs: Presentation, topic_name: str,
+                      questions: list[str], answers: list[str] = None) -> None:
+    """4-question starter in cross/plus quadrant layout.
+    Pass answers to render the answers version of the slide.
+    """
+    TEAL_LIGHT = RGBColor(0xD1, 0xF2, 0xEB)
+
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+
+    heading = "Starter — Answers" if answers else "Starter"
+    _textbox(slide, Inches(0.2), Inches(0.9), Inches(9.6), Inches(0.32),
+             text=heading, font_size=T.HEADING_SIZE, bold=True,
+             colour=T.PURPLE, underline=True, word_wrap=False)
+
+    # Cross dividers
+    _coloured_box(slide, Inches(4.88), Inches(1.28), Inches(0.12), Inches(6.1), T.PURPLE)
+    _coloured_box(slide, Inches(0.15), Inches(4.3), Inches(9.73), Inches(0.12), T.PURPLE)
+
+    positions = [
+        (Inches(0.18), Inches(1.3)),   # Q1 top-left
+        (Inches(5.08), Inches(1.3)),   # Q2 top-right
+        (Inches(0.18), Inches(4.5)),   # Q3 bottom-left
+        (Inches(5.08), Inches(4.5)),   # Q4 bottom-right
+    ]
+    box_w = Inches(4.6)
+    heights = [Inches(2.88), Inches(2.88), Inches(2.88), Inches(2.88)]
+
+    q_list = (list(questions) + [""] * 4)[:4]
+    a_list = (list(answers) if answers else []) + [""] * 4
+
+    for i, ((lft, top), h) in enumerate(zip(positions, heights)):
+        _coloured_box(slide, lft, top, box_w, h, T.PURPLE_LIGHT)
+
+        # Number badge
+        _coloured_box(slide,
+                      lft + Inches(0.08), top + Inches(0.07),
+                      Inches(0.38), Inches(0.34),
+                      T.PURPLE,
+                      text=str(i + 1), text_colour=T.WHITE,
+                      font_size=Pt(14), bold=True)
+
+        body = q_list[i]
+        if answers and i < len(answers) and a_list[i]:
+            body = f"{q_list[i]}\n\nAnswer: {a_list[i]}"
+
+        _textbox(slide,
+                 lft + Inches(0.55), top + Inches(0.1),
+                 box_w - Inches(0.65), h - Inches(0.2),
+                 text=body, font_size=Pt(15), colour=T.BLACK, word_wrap=True)
+
+
+def make_learning_intro(prs: Presentation, topic_name: str,
+                        objective: str, objective_num: int) -> None:
+    """Objective introduction slide — what we're learning and why."""
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+
+    # Purple objective banner
+    _coloured_box(slide,
+                  Inches(0.2), Inches(0.95),
+                  Inches(9.6), Inches(0.75),
+                  T.PURPLE,
+                  text=f"Objective {objective_num}",
+                  font_size=Pt(22), bold=True, alignment=PP_ALIGN.CENTER)
+
+    # Objective text box
+    _coloured_box(slide,
+                  Inches(0.2), Inches(1.8),
+                  Inches(9.6), Inches(1.5),
+                  T.PURPLE_LIGHT,
+                  text=objective,
+                  text_colour=T.BLACK, font_size=Pt(18),
+                  alignment=PP_ALIGN.LEFT)
+
+    # Success criteria heading
+    _textbox(slide, Inches(0.25), Inches(3.45), Inches(9.5), Inches(0.42),
+             text="By the end of this lesson you will be able to:",
+             font_size=Pt(16), bold=True, colour=T.PURPLE)
+
+    # Success criteria box
+    criteria = (
+        f"• {objective}\n\n"
+        "• Show all working clearly, step by step\n\n"
+        "• Apply this skill with increasing confidence across a range of question types"
+    )
+    _coloured_box(slide,
+                  Inches(0.25), Inches(3.95),
+                  Inches(9.5), Inches(3.35),
+                  RGBColor(0xF5, 0xF0, 0xFF),
+                  text=criteria,
+                  text_colour=T.BLACK, font_size=Pt(16),
+                  alignment=PP_ALIGN.LEFT)
+
+
+def make_ido_slide(prs: Presentation, topic_name: str,
+                   heading: str, worked_example: str,
+                   notes: str = "") -> None:
+    """I Do — teacher-led worked example."""
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+    _phase_badge(slide, "I Do")
+
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
+             text=heading, font_size=T.HEADING_SIZE, bold=True,
+             colour=T.BLACK, underline=True)
+
+    if notes:
+        _textbox(slide, Inches(0.3), Inches(1.45), Inches(5.7), Inches(5.85),
+                 text=worked_example, font_size=Pt(16),
+                 colour=T.BLACK, word_wrap=True)
+        _coloured_box(slide,
+                      Inches(6.15), Inches(1.45),
+                      Inches(3.55), Inches(5.85),
+                      T.PURPLE_LIGHT,
+                      text=notes, text_colour=T.BLACK,
+                      font_size=Pt(13), alignment=PP_ALIGN.LEFT)
+    else:
+        _textbox(slide, Inches(0.3), Inches(1.45), Inches(9.4), Inches(5.85),
+                 text=worked_example, font_size=Pt(17),
+                 colour=T.BLACK, word_wrap=True)
+
+
+def make_wedo_slide(prs: Presentation, topic_name: str,
+                    heading: str, question: str,
+                    scaffold_steps: list[str] = None) -> None:
+    """We Do — guided practice with scaffold step boxes."""
+    TEAL_LIGHT = RGBColor(0xD1, 0xF2, 0xEB)
+
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+    _phase_badge(slide, "We Do")
+
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
+             text=heading, font_size=T.HEADING_SIZE, bold=True,
+             colour=T.BLACK, underline=True)
+
+    _coloured_box(slide,
+                  Inches(0.3), Inches(1.45),
+                  Inches(9.4), Inches(1.5),
+                  TEAL_LIGHT,
+                  text=question, text_colour=T.BLACK,
+                  font_size=Pt(17), alignment=PP_ALIGN.LEFT)
+
+    steps = (scaffold_steps or [
+        "Step 1: What are we finding? Identify the key information.",
+        "Step 2: Write the method / rule before substituting.",
+        "Step 3: Substitute and calculate — show every line.",
+        "Step 4: Check — does the answer make sense?",
+    ])[:4]
+
+    step_positions = [
+        (Inches(0.3),  Inches(3.1)),
+        (Inches(5.05), Inches(3.1)),
+        (Inches(0.3),  Inches(5.2)),
+        (Inches(5.05), Inches(5.2)),
+    ]
+    for step_text, (lft, top) in zip(steps, step_positions):
+        _coloured_box(slide, lft, top, Inches(4.6), Inches(2.0),
+                      T.PURPLE_LIGHT,
+                      text=step_text, text_colour=T.BLACK,
+                      font_size=Pt(14), alignment=PP_ALIGN.LEFT)
+
+
+def make_youdo_slide(prs: Presentation, topic_name: str,
+                     heading: str, question: str,
+                     answer: str = "") -> None:
+    """You Do — student solo attempt with large working space."""
+    ORANGE_LIGHT = RGBColor(0xFF, 0xF3, 0xCD)
+
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+    _phase_badge(slide, "You Do")
+
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
+             text=heading, font_size=T.HEADING_SIZE, bold=True,
+             colour=T.BLACK, underline=True)
+
+    _coloured_box(slide,
+                  Inches(0.3), Inches(1.45),
+                  Inches(9.4), Inches(1.45),
+                  ORANGE_LIGHT,
+                  text=question, text_colour=T.BLACK,
+                  font_size=Pt(17), alignment=PP_ALIGN.LEFT)
+
+    # Working space
+    _coloured_box(slide,
+                  Inches(0.3), Inches(3.05),
+                  Inches(9.4), Inches(3.9),
+                  T.WHITE,
+                  border_colour=T.ORANGE, border_pt=1.5)
+
+    _textbox(slide, Inches(0.3), Inches(7.05), Inches(9.4), Inches(0.38),
+             text="Show all of your working in your book.",
+             font_size=Pt(13), colour=T.DARK_GREY, italic=True)
+
+    if answer:
+        _textbox(slide, Inches(0.3), Inches(7.1), Inches(9.4), Inches(0.35),
+                 text=f"Answer: {answer}",
+                 font_size=Pt(11), colour=RGBColor(0xBB, 0xBB, 0xBB),
+                 alignment=PP_ALIGN.RIGHT)
+
+
+def make_mini_whiteboard(prs: Presentation, topic_name: str,
+                         question: str, question_num: int = None,
+                         total: int = 10) -> None:
+    """Mini whiteboard question slide — one question, large display area."""
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+
+    counter = f"  ({question_num}/{total})" if question_num else ""
+    _coloured_box(slide,
+                  Inches(0.2), Inches(0.88),
+                  Inches(9.6), Inches(0.55),
+                  T.TEAL,
+                  text=f"Mini Whiteboard{counter}",
+                  text_colour=T.WHITE, font_size=Pt(20), bold=True)
+
+    # White whiteboard area
+    _coloured_box(slide,
+                  Inches(0.5), Inches(1.6),
+                  Inches(9.0), Inches(5.15),
+                  T.WHITE,
+                  text=question, text_colour=T.BLACK,
+                  font_size=Pt(26), alignment=PP_ALIGN.CENTER,
+                  border_colour=T.TEAL, border_pt=2.0)
+
+    _textbox(slide, Inches(0.5), Inches(6.85), Inches(9.0), Inches(0.42),
+             text="Show me your answer on your mini whiteboard.",
+             font_size=Pt(13), colour=T.DARK_GREY, italic=True,
+             alignment=PP_ALIGN.CENTER)
+
+
+def make_independent_practice(prs: Presentation, topic_name: str,
+                               questions: list[str]) -> None:
+    """Independent practice slide with up to 10 numbered questions in two columns."""
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+
+    _coloured_box(slide,
+                  Inches(0.2), Inches(0.88),
+                  Inches(9.6), Inches(0.55),
+                  T.ORANGE,
+                  text="Independent Practice",
+                  text_colour=T.WHITE, font_size=Pt(20), bold=True)
+
+    qs = list(questions)[:10]
+    mid = (len(qs) + 1) // 2
+    left_qs  = qs[:mid]
+    right_qs = qs[mid:]
+
+    left_text = "\n\n".join(f"{i + 1}.  {q}" for i, q in enumerate(left_qs))
+    _textbox(slide, Inches(0.25), Inches(1.6), Inches(4.65), Inches(5.65),
+             text=left_text, font_size=Pt(14), colour=T.BLACK, word_wrap=True)
+
+    if right_qs:
+        right_text = "\n\n".join(
+            f"{i + mid + 1}.  {q}" for i, q in enumerate(right_qs)
+        )
+        _textbox(slide, Inches(5.1), Inches(1.6), Inches(4.65), Inches(5.65),
+                 text=right_text, font_size=Pt(14), colour=T.BLACK, word_wrap=True)
+
+    # Vertical divider between columns
+    if right_qs:
+        _coloured_box(slide, Inches(5.0), Inches(1.6), Inches(0.05), Inches(5.65),
+                      T.PURPLE_LIGHT)
+
+
+def make_independent_answers(prs: Presentation, topic_name: str,
+                              questions: list[str],
+                              answers: list[str]) -> None:
+    """Answers slide for independent practice."""
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+
+    _coloured_box(slide,
+                  Inches(0.2), Inches(0.88),
+                  Inches(9.6), Inches(0.55),
+                  T.ORANGE,
+                  text="Independent Practice — Answers",
+                  text_colour=T.WHITE, font_size=Pt(20), bold=True)
+
+    qs  = list(questions)[:10]
+    ans = (list(answers) + ["?"] * 10)[:len(qs)]
+    mid = (len(qs) + 1) // 2
+
+    left_text = "\n\n".join(
+        f"{i + 1}.  {ans[i]}" for i in range(min(mid, len(ans)))
+    )
+    _textbox(slide, Inches(0.25), Inches(1.6), Inches(4.65), Inches(5.65),
+             text=left_text, font_size=Pt(14), colour=T.BLACK, word_wrap=True)
+
+    if mid < len(qs):
+        right_text = "\n\n".join(
+            f"{i + mid + 1}.  {ans[i + mid]}"
+            for i in range(len(qs) - mid)
+        )
+        _textbox(slide, Inches(5.1), Inches(1.6), Inches(4.65), Inches(5.65),
+                 text=right_text, font_size=Pt(14), colour=T.BLACK, word_wrap=True)
+
+    if mid < len(qs):
+        _coloured_box(slide, Inches(5.0), Inches(1.6), Inches(0.05), Inches(5.65),
+                      T.PURPLE_LIGHT)
+
+
+def make_plenary(prs: Presentation, topic_name: str,
+                 objective: str, summary: str,
+                 question: str, answer: str = "") -> None:
+    """Plenary slide — lesson summary and final mini whiteboard check."""
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+
+    _coloured_box(slide,
+                  Inches(0.2), Inches(0.88),
+                  Inches(9.6), Inches(0.55),
+                  T.PURPLE,
+                  text="Plenary",
+                  text_colour=T.WHITE, font_size=Pt(20), bold=True)
+
+    _coloured_box(slide,
+                  Inches(0.2), Inches(1.55),
+                  Inches(9.6), Inches(2.0),
+                  T.PURPLE_LIGHT,
+                  text=summary, text_colour=T.BLACK,
+                  font_size=Pt(15), alignment=PP_ALIGN.LEFT)
+
+    _textbox(slide, Inches(0.25), Inches(3.65), Inches(9.5), Inches(0.42),
+             text="Now show me on your whiteboard:",
+             font_size=Pt(16), bold=True, colour=T.PURPLE)
+
+    _coloured_box(slide,
+                  Inches(0.25), Inches(4.15),
+                  Inches(9.5), Inches(2.5),
+                  T.WHITE,
+                  text=question, text_colour=T.BLACK,
+                  font_size=Pt(22), alignment=PP_ALIGN.CENTER,
+                  border_colour=T.PURPLE, border_pt=2.0)
+
+    if answer:
+        _textbox(slide, Inches(0.25), Inches(6.75), Inches(9.5), Inches(0.55),
+                 text=f"Answer: {answer}",
+                 font_size=Pt(12), colour=T.DARK_GREY, italic=True)
