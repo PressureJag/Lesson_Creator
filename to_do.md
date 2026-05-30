@@ -36,7 +36,16 @@ A live document tracking outstanding work. Updated as new tasks are identified.
     --topic "Algebra 1 Core Plus"
   ```
 
-- [ ] **Maths-specific enhancements** — review the tool against common secondary maths topics and consider adding:
+- [x] **Maths depth improvements** — content generation prompts updated with:
+  - Variation theory in practice questions (a–c vary one feature at a time)
+  - Fluency → Reasoning → Problem Solving arc (a–c / d–f / g–h tiers clearly defined)
+  - Worked examples require concrete numbers, annotated steps, and generalised method
+  - ASN reasoning tasks must have genuinely non-trivial statements (ALWAYS/SOMETIMES/NEVER rules enforced)
+  - Open reasoning tasks must be genuine multi-step problem solving (not "explain how")
+  - WSWT pairs require a named structural variation and "What changed?" prompt
+  - We Do requires near-variation of I Do (same method, same steps, different values only)
+
+- [ ] **Maths-specific enhancements** — further improvements to consider:
   - Fraction / ratio bar models as a default diagram type for proportion topics
   - Algebraic notation rendering (e.g. proper superscript for powers)
   - Times tables / multiplication grid slide type for lower-attaining groups
