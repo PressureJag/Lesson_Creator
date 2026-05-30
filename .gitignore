@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Generated output
+Output/
+
+# Example lessons and SOW PDFs (large binary files, kept locally)
+Examples/
+
+# Extracted images (only outwood_logo.png is needed)
+assets/image*.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
