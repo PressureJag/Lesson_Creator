@@ -63,20 +63,26 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 
 ---
 
+## 🟡 Visual Rebuild — match `Examples/Example Slide deck/01_full_sequence_v5.pdf`
+
+Steps 1–8 identified from full template analysis. Work one step at a time, verify in PowerPoint before moving on.
+
+- [x] **Step 1 — Slide dimensions + header** — 16:9 (13.33"×7.5"), OGAT badge + header bar + phase circle badge; no logo, no watermark
+- [ ] **Step 2 — 4-card layout** — correct fills (yellow/peach/green/blue), coloured border, "Working..." prompt in amber, 3 dashed lines, thematic icon top-right; answers version: red text + green ✓
+- [ ] **Step 3 — Clarity of Learning** — "Topic Question" (pink border) + "Lesson Question" (teal border) + "What it'll look like" (dark border + diagram) + 4 success-criteria chips
+- [ ] **Step 4 — I Do** — yellow question banner; left picture panel + right numbered steps (① ②) + green answer bar + dark navy key-idea bar
+- [ ] **Step 5 — We Do / You Do difficulty levels** — Easy / Medium / Stretch variants; thin purple teacher-note bar between header and 4-card grid; Stretch badge (olive)
+- [ ] **Step 6 — Spot the Mistake + Why** — Bobby (red border, wrong) vs Sara (green border, right) 2-card layout; pink "Turn to your partner" footer bar; Why slide: Bobby's mistake (red X) + Sara's method (green ✓) + dark navy RULE bar
+- [ ] **Step 7 — Mixed Retrieval + Exam-style + Coming Next** — Mixed Retrieval (4-card, red Retrieval badge); Exam-style Synoptic (scenario card + 3-part a/b/c columns, Synoptic badge); Exam-style Worked Solutions; Coming Next (full purple background, 4 white topic-preview cards)
+- [ ] **Step 8 — Title slide + "Where we're going"** — navy strip top/bottom, central white card, purple pill banner, objective icon row, footer; journey timeline slide with numbered circles
+
+---
+
 ## 🟢 Quality Improvements
 
-- [ ] **Visual check** — compare generated PPTX slide-by-side with `Examples/Lessons/Algebra 1 (1).pptx`:
-  - Yellow background on all slides
-  - Logo top-left, purple title, dot watermark top-right
-  - Section dividers match Outwood style
-  - Text not overflowing on any slide
-
-- [ ] **Slide layout review** — after opening demo PPTX, note any slides where:
-  - Text is too small or too large
-  - Content overflows the slide
-  - Layout looks unbalanced
-
-- [ ] **Practice questions** — check that 8 questions (a–h) fit comfortably in two-column layout without overflow
+- [ ] **Visual check** — open generated PPTX alongside `Examples/Example Slide deck/01_full_sequence_v5.pdf` and compare slide-by-slide
+- [ ] **Slide layout review** — check for text overflow, unbalanced spacing, or elements outside the slide boundary
+- [ ] **Practice questions** — check that 8 questions fit comfortably in two-column layout without overflow
 
 ---
 
@@ -103,22 +109,18 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 
 ## 📋 Completed
 
+- [x] **Visual rebuild Step 1** — 16:9 slide dimensions, OGAT badge + header bar + phase circle badge, 4-card Starter with correct colours/dashed lines, updated all content coordinates; 10 unused legacy functions removed
 - [x] **Real-time notification system** — `generator/notification.py` (terminal headers, progress icons, numbered choice prompts with 2-min countdown), `generator/planner.py` (per-objective teaching approach options), `generator/gdrive.py` (auto-upload to Google Drive `Lesson Creator/` folder after generation), startup API confirmation prompt, between-objective checkpoints (continue / skip next / abort)
-
 - [x] Core project structure (`generate_lesson.py`, `generator/` modules)
 - [x] SOW PDF parser — two-column auto-detection, handles vocabulary sub-columns
-- [x] All 15 slide template functions built and working
 - [x] Outwood brand theme — yellow `#FFFFCC` background, purple `#5B2C8D`, Calibri font
-- [x] Outwood circular logo on every slide (`assets/outwood_logo.png`)
-- [x] Purple dot watermark top-right on every slide
 - [x] Demo mode — works without API key, uses realistic stub content
 - [x] Diagram generator — bar models, number lines, area grids, angle diagrams
 - [x] Per-objective retrieval starter (previously one shared starter at the top)
-- [x] Hook slide on every objective (previously first 2 only)
 - [x] Methods text matching fixed — now index-based before keyword fallback
 - [x] Fixed `lines` NameError crash in `sow_parser.py`
-- [x] I Do / We Do / You Do structure — phase badges (purple/teal/orange), We Do scaffold + answers slides
-- [x] Answer slides for all question types — retrieval answers, We Do answers, You Do answers all follow immediately
+- [x] Answer slides for all question types follow immediately after questions
+- [x] Content generation overhaul — structured outputs, model tiering, caching, SoW alignment
 - [x] `requirements.txt` added
 - [x] `CLAUDE.md` written with full project context
 - [x] Pushed to GitHub: `github.com/PressureJag/Lesson_Creator`
