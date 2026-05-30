@@ -40,11 +40,11 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 
 ## 🟡 Before First Real Use
 
-- [ ] **"I Do, We Do, You Do" structure** — restructure the worked example section of each objective block into three phases:
-  - *I Do*: teacher-led worked example (already exists as `make_teaching_text`)
-  - *We Do*: guided practice slide — teacher and students work a problem together
-  - *You Do*: independent practice questions (currently `make_practice`)
-  Each phase should be clearly labelled on its own slide.
+- [x] **"I Do, We Do, You Do" structure** — implemented. Each objective block now has:
+  - *I Do*: `make_teaching_text` with purple badge + optional diagram slide
+  - *We Do*: `make_we_do` (scaffold with 4 step boxes) + `make_we_do` answers slide (teal badge)
+  - *You Do*: `make_practice` with orange badge + answers slide
+  Slide count: 71 slides for 5 objectives (was 61).
 
 - [ ] **Answer slide for every practice slide** — ensure every slide that presents questions (We Do, You Do, retrieval starter) is immediately followed by a dedicated answers slide. Currently only the main practice and retrieval starters have answer pairs — We Do answers are missing.
 
@@ -110,6 +110,7 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 - [x] Hook slide on every objective (previously first 2 only)
 - [x] Methods text matching fixed — now index-based before keyword fallback
 - [x] Fixed `lines` NameError crash in `sow_parser.py`
+- [x] I Do / We Do / You Do structure — phase badges (purple/teal/orange), We Do scaffold + answers slides
 - [x] `requirements.txt` added
 - [x] `CLAUDE.md` written with full project context
 - [x] Pushed to GitHub: `github.com/PressureJag/Lesson_Creator`

@@ -150,6 +150,23 @@ def _embed_image(slide, img_bytes: io.BytesIO, left, top, width, height):
     slide.shapes.add_picture(img_bytes, left, top, width, height)
 
 
+def _phase_badge(slide, phase: str):
+    """Add a small coloured pill badge for I Do / We Do / You Do phases."""
+    colours = {
+        "I Do":   T.PURPLE,
+        "We Do":  T.TEAL,
+        "You Do": T.ORANGE,
+    }
+    colour = colours.get(phase, T.PURPLE)
+    _coloured_box(slide,
+                  Inches(0.3), Inches(0.88),
+                  Inches(1.1), Inches(0.38),
+                  colour,
+                  text=phase, text_colour=T.WHITE,
+                  font_size=Pt(13), bold=True,
+                  alignment=PP_ALIGN.CENTER)
+
+
 # ─────────────────────────────────────────────
 #  Slide constructors
 # ─────────────────────────────────────────────
@@ -251,12 +268,13 @@ def make_hook(prs: Presentation, topic_name: str,
 
 def make_teaching_text(prs: Presentation, topic_name: str,
                        heading: str, worked_example: str,
-                       notes: str = "") -> None:
-    """Teacher-led worked example — text only."""
+                       notes: str = "", phase: str = "I Do") -> None:
+    """Teacher-led worked example — text only. Phase badge: I Do / We Do / You Do."""
     slide = _blank_slide(prs)
     _add_header(slide, topic_name)
 
-    _textbox(slide, Inches(0.3), Inches(0.9), Inches(9.4), Inches(0.45),
+    _phase_badge(slide, phase)
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
              text=heading, font_size=T.HEADING_SIZE, bold=True,
              colour=T.BLACK, underline=True)
 
@@ -278,12 +296,13 @@ def make_teaching_text(prs: Presentation, topic_name: str,
 
 def make_teaching_visual(prs: Presentation, topic_name: str,
                          heading: str, img_bytes: io.BytesIO,
-                         right_text: str = "") -> None:
+                         right_text: str = "", phase: str = "I Do") -> None:
     """Worked example with a diagram on the left, text on the right."""
     slide = _blank_slide(prs)
     _add_header(slide, topic_name)
 
-    _textbox(slide, Inches(0.3), Inches(0.9), Inches(9.4), Inches(0.45),
+    _phase_badge(slide, phase)
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
              text=heading, font_size=T.HEADING_SIZE, bold=True,
              colour=T.BLACK, underline=True)
 
@@ -296,6 +315,62 @@ def make_teaching_visual(prs: Presentation, topic_name: str,
         _textbox(slide, Inches(5.5), Inches(1.5), Inches(4.2), Inches(5.5),
                  text=right_text, font_size=Pt(16),
                  colour=T.BLACK, word_wrap=True)
+
+
+def make_we_do(prs: Presentation, topic_name: str,
+               we_do_data: dict, answers: bool = False) -> None:
+    """
+    We Do guided practice slide.
+    Question version: shows the problem + 4 scaffold step boxes.
+    Answer version (answers=True): shows the problem + full worked solution.
+    """
+    TEAL_LIGHT  = RGBColor(0xD1, 0xF2, 0xEB)
+    GREEN_LIGHT = RGBColor(0xE8, 0xF8, 0xF5)
+
+    slide = _blank_slide(prs)
+    _add_header(slide, topic_name)
+    _phase_badge(slide, "We Do")
+
+    heading_text = ("We Do — Answers" if answers
+                    else we_do_data.get("heading", "We Do — Guided Practice"))
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
+             text=heading_text, font_size=T.HEADING_SIZE, bold=True,
+             colour=T.BLACK, underline=True)
+
+    # Problem statement box
+    _coloured_box(slide,
+                  Inches(0.3), Inches(1.45),
+                  Inches(9.4), Inches(1.45),
+                  TEAL_LIGHT,
+                  text=we_do_data.get("problem", ""),
+                  text_colour=T.BLACK, font_size=Pt(16),
+                  alignment=PP_ALIGN.LEFT)
+
+    if answers:
+        _coloured_box(slide,
+                      Inches(0.3), Inches(3.05),
+                      Inches(9.4), Inches(4.2),
+                      GREEN_LIGHT,
+                      text=we_do_data.get("answer", ""),
+                      text_colour=T.BLACK, font_size=Pt(15),
+                      alignment=PP_ALIGN.LEFT)
+    else:
+        # 4 scaffold step boxes in a 2×2 grid
+        steps = we_do_data.get("steps", [f"Step {i+1}" for i in range(4)])
+        positions = [
+            (Inches(0.3), Inches(3.05)),
+            (Inches(5.1), Inches(3.05)),
+            (Inches(0.3), Inches(5.15)),
+            (Inches(5.1), Inches(5.15)),
+        ]
+        heights = [Inches(1.95), Inches(1.95), Inches(2.1), Inches(2.1)]
+        for i, ((lft, top), h) in enumerate(zip(positions, heights)):
+            step_text = steps[i] if i < len(steps) else f"Step {i + 1}"
+            _coloured_box(slide, lft, top, Inches(4.6), h,
+                          T.PURPLE_LIGHT,
+                          text=step_text,
+                          text_colour=T.BLACK, font_size=Pt(14),
+                          alignment=PP_ALIGN.LEFT)
 
 
 def make_wswt(prs: Presentation, topic_name: str,
@@ -318,12 +393,13 @@ def make_wswt(prs: Presentation, topic_name: str,
 
 def make_practice(prs: Presentation, topic_name: str,
                   heading: str, questions: list[str],
-                  two_column: bool = False) -> None:
+                  two_column: bool = False, phase: str = "You Do") -> None:
     """Practice questions slide — lettered list."""
     slide = _blank_slide(prs)
     _add_header(slide, topic_name)
 
-    _textbox(slide, Inches(0.3), Inches(0.9), Inches(9.4), Inches(0.45),
+    _phase_badge(slide, phase)
+    _textbox(slide, Inches(1.5), Inches(0.88), Inches(8.2), Inches(0.45),
              text=heading, font_size=T.HEADING_SIZE, bold=True,
              colour=T.BLACK, underline=True)
 

@@ -80,6 +80,27 @@ def _stub_practice(objective: str) -> dict:
     }
 
 
+def _stub_we_do(objective: str) -> dict:
+    return {
+        "heading": "We Do — Guided Practice",
+        "problem": (
+            f"Let's work through this together.\n\n"
+            f"A problem involving: {objective[:60]}\n\n"
+            "[Full problem will be generated with API key]"
+        ),
+        "steps": [
+            "Step 1: What are we finding? Read the problem carefully and underline key information.",
+            "Step 2: What do we know? Write down all the given values and the method we need.",
+            "Step 3: Apply the method — show every line of working clearly.",
+            "Step 4: Check your answer — is it reasonable? Does it match the units/context?",
+        ],
+        "answer": (
+            f"Full worked solution for: {objective[:60]}\n\n"
+            "[Answer will be generated with API key]"
+        ),
+    }
+
+
 def _stub_reasoning(objective: str, task_type: str) -> str:
     if task_type == "asn":
         return (
@@ -178,6 +199,42 @@ Respond ONLY with valid JSON:
     if m:
         return json.loads(m.group(0))
     return _stub_worked_example(objective, methods_text)
+
+
+def generate_we_do(objective: str, topic: str,
+                   methods_text: str = "") -> dict:
+    if _demo_mode:
+        return _stub_we_do(objective)
+
+    extra = (f"\n\nCommon Methods guidance:\n{methods_text[:600]}"
+             if methods_text else "")
+    prompt = f"""You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.
+
+Topic: {topic}
+Objective: {objective}{extra}
+
+Write a 'We Do' guided practice problem. This is worked through TOGETHER as a class immediately after the teacher's 'I Do' demonstration.
+Use the same method but a clearly different problem (different numbers or context).
+
+Respond ONLY with valid JSON:
+{{
+  "heading": "We Do — short descriptor (4-6 words)",
+  "problem": "the problem statement, clearly worded (1-3 sentences)",
+  "steps": [
+    "Step 1: what to do first (prompt only, not the answer)",
+    "Step 2: ...",
+    "Step 3: ...",
+    "Step 4: ..."
+  ],
+  "answer": "full worked solution showing every step and the final answer"
+}}
+
+All maths must be correct. Verify every numerical answer. Plain text notation only (^2, sqrt(), fractions as a/b)."""
+    text = _call(prompt, max_tokens=900)
+    m = re.search(r'\{.*\}', text, re.DOTALL)
+    if m:
+        return json.loads(m.group(0))
+    return _stub_we_do(objective)
 
 
 def generate_practice_questions(objective: str, topic: str,

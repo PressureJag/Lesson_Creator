@@ -45,24 +45,26 @@ python3 generate_lesson.py --summary ... --methods ... --topic ...
 
 ## Slide structure per objective block
 
-Each objective block starts with a retrieval starter pair, then the teaching sequence:
+Each objective block starts with a retrieval starter pair, then the teaching sequence using **I Do / We Do / You Do**:
 
 1. Retrieval starter (questions based on prior knowledge for this objective)
 2. Retrieval answers
 3. Section divider (full purple banner)
 4. Learning objective
-5. Hook / real-world context (**all objectives**, not just first 2)
-6. Worked example (teaching text)
-7. Visual diagram (bar model / number line / area grid / angle — if relevant)
-8. What's the Same? What's Different? (WSWT)
-9. Practice questions (6 questions, two-column layout)
-10. Answers
-11. Reasoning task (alternates ASN / open by objective index)
-12. Misconception callout (red/green boxes — one per objective, matched by index)
+5. Hook / real-world context (all objectives)
+6. **[I Do — purple badge]** Worked example (teacher-led, step-by-step)
+7. **[I Do — purple badge]** Visual diagram (if relevant for objective)
+8. **[We Do — teal badge]** Guided practice — 4-step scaffold boxes for class to work together
+9. **[We Do — teal badge]** Guided practice — answers / full worked solution
+10. What's the Same? What's Different? (WSWT)
+11. **[You Do — orange badge]** Practice questions (6, two-column)
+12. Answers
+13. Reasoning task (alternates ASN / open by objective index)
+14. Misconception callout (red/green boxes — one per objective, matched by index)
 
 Intro slides (before objective blocks): Title → Prior Knowledge → Vocabulary
 
-**Slide count**: ~13–14 slides per objective. A 5-objective topic → ~61 slides. An 11-objective topic → ~130 slides.
+**Slide count**: ~15 slides per objective. A 5-objective topic → ~71 slides. An 11-objective topic → ~150 slides.
 
 **Methods matching**: `methods_pages = list(methods.values())` — page N is matched to objective N by index first, keyword fallback only if N exceeds the page count.
 

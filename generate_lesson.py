@@ -124,23 +124,31 @@ def build_deck(sow: dict, methods: dict, topic_name: str,
         hook = content_gen.generate_hook(obj, topic_name, pd)
         slide_builder.make_hook(prs, topic_name, hook, obj)
 
-        # Worked example
-        print("  Generating worked example…")
+        # ── I Do ────────────────────────────────────────────────
+        print("  Generating worked example (I Do)…")
         worked = content_gen.generate_worked_example(obj, topic_name, methods_text)
         slide_builder.make_teaching_text(
             prs, topic_name,
-            worked["heading"], worked["example"], worked.get("notes", "")
+            worked["heading"], worked["example"], worked.get("notes", ""),
+            phase="I Do"
         )
 
-        # Visual diagram (if relevant)
+        # Visual diagram (still part of I Do)
         diag = build_diagram(obj)
         if diag:
-            print("  Adding diagram…")
+            print("  Adding diagram (I Do)…")
             slide_builder.make_teaching_visual(
                 prs, topic_name,
                 worked["heading"], diag,
-                right_text=worked["example"][:300]
+                right_text=worked["example"][:300],
+                phase="I Do"
             )
+
+        # ── We Do ───────────────────────────────────────────────
+        print("  Generating guided practice (We Do)…")
+        we_do = content_gen.generate_we_do(obj, topic_name, methods_text)
+        slide_builder.make_we_do(prs, topic_name, we_do, answers=False)
+        slide_builder.make_we_do(prs, topic_name, we_do, answers=True)
 
         # What's the same / What's different
         print("  Generating WSWT task…")
@@ -148,15 +156,16 @@ def build_deck(sow: dict, methods: dict, topic_name: str,
         slide_builder.make_wswt(prs, topic_name,
                                  wswt["pair_a"], wswt["pair_b"])
 
-        # Practice questions
-        print("  Generating practice questions…")
+        # ── You Do ──────────────────────────────────────────────
+        print("  Generating practice questions (You Do)…")
         practice = content_gen.generate_practice_questions(obj, topic_name)
         qs = practice["questions"]
         ans = practice["answers"]
 
         slide_builder.make_practice(prs, topic_name,
                                      f"Practice — {obj[:50]}",
-                                     qs[:6], two_column=True)
+                                     qs[:6], two_column=True,
+                                     phase="You Do")
         slide_builder.make_answers(prs, topic_name,
                                     f"Practice — {obj[:50]}",
                                     list(zip(qs[:6], ans[:6])))
