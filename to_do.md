@@ -38,6 +38,26 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 
 ---
 
+## 🟡 Before First Real Use
+
+- [ ] **"I Do, We Do, You Do" structure** — restructure the worked example section of each objective block into three phases:
+  - *I Do*: teacher-led worked example (already exists as `make_teaching_text`)
+  - *We Do*: guided practice slide — teacher and students work a problem together
+  - *You Do*: independent practice questions (currently `make_practice`)
+  Each phase should be clearly labelled on its own slide.
+
+- [ ] **Answer slide for every practice slide** — ensure every slide that presents questions (We Do, You Do, retrieval starter) is immediately followed by a dedicated answers slide. Currently only the main practice and retrieval starters have answer pairs — We Do answers are missing.
+
+- [ ] **Maths-specific enhancements** — review the tool against common secondary maths topics and consider adding:
+  - Fraction / ratio bar models as a default diagram type for proportion topics
+  - Algebraic notation rendering (e.g. proper superscript for powers)
+  - Times tables / multiplication grid slide type for lower-attaining groups
+  - Coordinate grid diagram type for geometry/algebra crossover topics
+  - Sentence stems / stem sentences for reasoning slides (common in mastery maths)
+  - "Odd one out" task type as an alternative to WSWT
+
+---
+
 ## 🟢 Quality Improvements
 
 - [ ] **Visual check** — compare generated PPTX slide-by-side with `Examples/Lessons/Algebra 1 (1).pptx`:
