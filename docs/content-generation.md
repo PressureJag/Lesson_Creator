@@ -6,11 +6,11 @@ Source of truth: `generator/content_gen.py`
 
 | Step | Function | Model | Max tokens |
 |------|----------|-------|-----------|
-| Retrieval starter (4 Qs) | `generate_retrieval_questions` | sonnet | 800 |
+| Retrieval starter (4 Qs) | `generate_retrieval_questions` | haiku | 800 |
 | I Do / We Do / You Do (1 call) | `generate_teaching_sequence` | opus | 2000 |
-| Mini whiteboard ×10 | `generate_mini_whiteboard_questions` | sonnet | 1200 |
-| Independent practice ×10 | `generate_independent_practice` | opus | 1800 |
-| Plenary | `generate_plenary` | sonnet | 500 |
+| Mini whiteboard ×10 | `generate_mini_whiteboard_questions` | haiku | 1200 |
+| Independent practice ×10 | `generate_independent_practice` | sonnet | 1800 |
+| Plenary | `generate_plenary` | haiku | 500 |
 
 All calls use a cached system prompt (`cache_control: ephemeral`) so the Outwood teacher persona is not re-billed on every request.
 

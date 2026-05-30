@@ -459,7 +459,7 @@ def generate_retrieval_questions(prior_knowledge: list,
         "All maths must be correct with specific numbers, not variables.\n\n"
         "Return JSON with keys: questions (array of 4 strings), answers (array of 4 strings)."
     )
-    return _call_json(prompt, _SCHEMA_RETRIEVAL, max_tokens=800, model="claude-sonnet-4-6")
+    return _call_json(prompt, _SCHEMA_RETRIEVAL, max_tokens=800, model="claude-haiku-4-5-20251001")
 
 
 def generate_hook(objective: str, topic: str,
@@ -726,7 +726,7 @@ def generate_mini_whiteboard_questions(objective: str, topic: str,
         "- ALL maths correct with specific numbers\n\n"
         "Return JSON: questions (array of 10 strings), answers (array of 10 strings)."
     )
-    return _call_json(prompt, _SCHEMA_MINI_WB, max_tokens=1200, model="claude-sonnet-4-6")
+    return _call_json(prompt, _SCHEMA_MINI_WB, max_tokens=1200, model="claude-haiku-4-5-20251001")
 
 
 def generate_independent_practice(objective: str, topic: str,
@@ -757,7 +757,7 @@ def generate_independent_practice(objective: str, topic: str,
         "All maths correct. Each question fits on one line.\n\n"
         "Return JSON: questions (array of 10 strings), answers (array of 10 strings)."
     )
-    return _call_json(prompt, _SCHEMA_INDEP_PRACTICE, max_tokens=1800, model="claude-opus-4-8")
+    return _call_json(prompt, _SCHEMA_INDEP_PRACTICE, max_tokens=1800, model="claude-sonnet-4-6")
 
 
 def generate_plenary(objective: str, topic: str) -> dict:
@@ -777,4 +777,4 @@ def generate_plenary(objective: str, topic: str) -> dict:
         "All maths correct.\n\n"
         "Return JSON: summary (string), question (string), answer (string)."
     )
-    return _call_json(prompt, _SCHEMA_PLENARY, max_tokens=500, model="claude-sonnet-4-6")
+    return _call_json(prompt, _SCHEMA_PLENARY, max_tokens=500, model="claude-haiku-4-5-20251001")
