@@ -219,7 +219,7 @@ def parse_summary(pdf_path: str) -> dict:
     vocab = _extract_vocab(pdf_path)
 
     return {
-        "topic":              topic or (lines[0] if lines else "Unknown Topic"),
+        "topic":              topic or objectives[0][:60] if objectives else "Unknown Topic",
         "big_question":       big_question,
         "time_hours":         time_hours or 6,
         "prior_knowledge":    prior,

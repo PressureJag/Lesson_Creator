@@ -89,28 +89,29 @@ def build_deck(sow: dict, methods: dict, topic_name: str,
         print("Building vocabulary slide…")
         slide_builder.make_vocabulary(prs, topic_name, vocab)
 
-    # ── Retrieval starter (uses first 4 prior knowledge items) ─
-    print("Generating retrieval starter…")
-    retrieval = content_gen.generate_retrieval_questions(
-        prior, objectives[0] if objectives else topic_name, topic_name
-    )
-    slide_builder.make_retrieval_starter(prs, topic_name,
-                                         retrieval["questions"])
-    slide_builder.make_retrieval_starter(prs, topic_name,
-                                         retrieval["questions"],
-                                         answers=True,
-                                         answer_list=retrieval["answers"])
-
     # ── Objective blocks ─────────────────────────────────────
+    methods_pages = list(methods.values())  # ordered list of methods pages
+
     for idx, obj in enumerate(objectives, start=1):
         print(f"\nObjective {idx}/{total}: {obj[:60]}…")
 
-        # Find relevant methods text for this objective
-        methods_text = ""
-        for key, val in methods.items():
-            if any(word in key.lower() for word in obj.lower().split()[:4]):
-                methods_text = val
-                break
+        # Match methods text by index first, fall back to keyword search
+        if idx - 1 < len(methods_pages):
+            methods_text = methods_pages[idx - 1]
+        else:
+            methods_text = ""
+            for key, val in methods.items():
+                if any(word in key.lower() for word in obj.lower().split()[:4]):
+                    methods_text = val
+                    break
+
+        # Per-objective retrieval starter
+        print("  Generating retrieval starter…")
+        retrieval = content_gen.generate_retrieval_questions(prior, obj, topic_name)
+        slide_builder.make_retrieval_starter(prs, topic_name, retrieval["questions"])
+        slide_builder.make_retrieval_starter(prs, topic_name, retrieval["questions"],
+                                             answers=True,
+                                             answer_list=retrieval["answers"])
 
         # Section divider
         slide_builder.make_section_divider(prs, topic_name, idx, obj)
@@ -118,11 +119,10 @@ def build_deck(sow: dict, methods: dict, topic_name: str,
         # Learning objective
         slide_builder.make_learning_objective(prs, topic_name, obj, idx)
 
-        # Hook (only for first 2 objectives to keep deck length manageable)
-        if idx <= 2:
-            print("  Generating hook…")
-            hook = content_gen.generate_hook(obj, topic_name, pd)
-            slide_builder.make_hook(prs, topic_name, hook, obj)
+        # Hook for every objective
+        print("  Generating hook…")
+        hook = content_gen.generate_hook(obj, topic_name, pd)
+        slide_builder.make_hook(prs, topic_name, hook, obj)
 
         # Worked example
         print("  Generating worked example…")
