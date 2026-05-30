@@ -475,8 +475,15 @@ def make_learning_intro(prs: Presentation, topic_name: str,
 
 def make_ido_slide(prs: Presentation, topic_name: str,
                    heading: str, worked_example: str,
-                   notes: str = "") -> None:
-    """I Do — teacher-led worked example."""
+                   method_text: str = "", notes: str = "") -> None:
+    """I Do — teacher-led worked example.
+
+    method_text: raw text from the Common Methods / Consistent Methodology PDF
+                 for this objective — displayed verbatim in the left panel so
+                 the mandated school method is always visible alongside the
+                 worked example.
+    notes:       AI-generated teacher note shown in the bottom key-idea bar.
+    """
     slide = _blank_slide(prs)
     _add_header(slide, "Worked Example", heading, "I do", T.PURPLE)
 
@@ -489,25 +496,33 @@ def make_ido_slide(prs: Presentation, topic_name: str,
 
     content_top = _CT + Inches(0.85)
     content_h   = Inches(4.60)
+    method_w    = Inches(4.30)
+    gap         = Inches(0.15)
+    right_x     = _L + method_w + gap
 
-    if notes:
-        # Left: picture/context panel
-        _box(slide, _L, content_top, Inches(4.20), content_h,
-             T.YELLOW_BG, border_colour=T.NAVY, border_pt=1.0)
-        _textbox(slide, _L + Inches(0.15), content_top + Inches(0.15),
-                 Inches(3.90), content_h - Inches(0.30),
-                 text=notes, font_size=Pt(13), colour=T.NAVY, word_wrap=True)
+    if method_text:
+        # Left — Common Method panel (peach background, labelled)
+        _box(slide, _L, content_top, method_w, content_h,
+             T.CARD_PEACH, border_colour=T.ORANGE, border_pt=2.0)
+        _textbox(slide, _L + Inches(0.12), content_top + Inches(0.08),
+                 method_w - Inches(0.24), Inches(0.30),
+                 text="COMMON METHOD", font_size=Pt(11), bold=True,
+                 colour=T.ORANGE)
+        _textbox(slide, _L + Inches(0.12), content_top + Inches(0.42),
+                 method_w - Inches(0.24), content_h - Inches(0.52),
+                 text=method_text, font_size=Pt(12),
+                 colour=T.NAVY, word_wrap=True)
 
-        # Right: worked steps
-        right_x = _L + Inches(4.35)
+        # Right — Worked example
         _box(slide, right_x, content_top,
-             _CW - Inches(4.35), content_h,
+             _CW - method_w - gap, content_h,
              T.WHITE, border_colour=T.NAVY, border_pt=1.0)
         _textbox(slide, right_x + Inches(0.15), content_top + Inches(0.15),
-                 _CW - Inches(4.65), content_h - Inches(0.30),
+                 _CW - method_w - gap - Inches(0.30), content_h - Inches(0.30),
                  text=worked_example, font_size=Pt(15),
                  colour=T.NAVY, word_wrap=True)
     else:
+        # No method text — full-width worked example
         _textbox(slide, _L, content_top, _CW, content_h,
                  text=worked_example, font_size=Pt(17),
                  colour=T.NAVY, word_wrap=True)
@@ -519,10 +534,10 @@ def make_ido_slide(prs: Presentation, topic_name: str,
          text="Answer shown above — check your working",
          text_colour=T.WHITE, font_size=Pt(14), bold=True)
 
-    # Dark navy key-idea bar
+    # Key-idea bar — teacher notes if provided, else generic prompt
+    key_idea = notes if notes else "Key idea:  show every step — method first, then substitute"
     _box(slide, _L, ans_top + Inches(0.58), _CW, Inches(0.42),
-         T.NAVY,
-         text="Key idea:  show every step — method first, then substitute",
+         T.NAVY, text=key_idea,
          text_colour=T.CARD_YELLOW, font_size=Pt(12), bold=True)
 
 

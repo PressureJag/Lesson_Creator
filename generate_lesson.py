@@ -180,7 +180,8 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
             prs, topic_name,
             teaching["i_do"]["heading"],
             teaching["i_do"]["worked_example"],
-            teaching["i_do"].get("notes", ""),
+            method_text=methods_text,
+            notes=teaching["i_do"].get("notes", ""),
         )
         slide_builder.make_wedo_slide(
             prs, topic_name,

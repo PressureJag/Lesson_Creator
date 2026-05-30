@@ -335,18 +335,19 @@ def _stub_wswt(objective: str) -> dict:
 
 def _stub_teaching_seq(objective: str, methods_text: str) -> dict:
     short = objective[:55]
-    example_base = methods_text[:300].strip() if methods_text else (
-        f"[Specific numerical example — e.g. Calculate {short} for a given value]\n\n"
-        "Step 1: Write down what you know  →  [given values]\n"
-        "        [Why: organising information prevents errors]\n\n"
-        "Step 2: Choose your method  →  [write the rule/formula first]\n"
-        "        [Why: always write before substituting]\n\n"
-        "Step 3: Substitute and calculate  →  [full working line by line]\n"
-        "        [Why: each line follows from the last — no jumps]\n\n"
-        "Step 4: State the answer with units and check  →  [final answer]\n"
-        "        [Why: units confirm you've answered the right question]\n\n"
-        "In general: [state the method in one sentence]\n\n"
-        "[Full example with real numbers generated with API key]"
+    example_base = (
+        f"[DEMO — real example generated with API]\n\n"
+        f"Following the Common Method shown on the left:\n\n"
+        f"Step 1: [identify given values]  →  e.g. value = ?\n"
+        f"        [Why: organising information prevents errors]\n\n"
+        f"Step 2: [write the method/rule before substituting]\n"
+        f"        [Why: always write before substituting]\n\n"
+        f"Step 3: [apply the method — show every line of working]\n"
+        f"        [Why: each line follows from the last — no jumps]\n\n"
+        f"Step 4: [state the answer with units and check]\n"
+        f"        [Why: units confirm you've answered the right question]\n\n"
+        f"In general: [method stated in one sentence]\n\n"
+        f"Objective: {short}"
     )
     return {
         "i_do": {
@@ -519,8 +520,11 @@ def generate_we_do(objective: str, topic: str,
     if _demo_mode:
         return _stub_we_do(objective)
 
-    extra = (f"\n\nCommon Methods guidance:\n{methods_text[:600]}"
-             if methods_text else "")
+    extra = (
+        f"\n\nMANDATORY METHOD — use this exact approach from the school's Common Methods doc:\n\n"
+        f"{methods_text}"
+        if methods_text else ""
+    )
     vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:6])}"
                  if vocabulary else "")
 
@@ -680,8 +684,13 @@ def generate_teaching_sequence(objective: str, topic: str,
     if _demo_mode:
         return _stub_teaching_seq(objective, methods_text)
 
-    extra = (f"\n\nSchool's teaching method from Common Methods document:\n{methods_text[:700]}"
-             if methods_text else "")
+    extra = (
+        f"\n\nMANDATORY TEACHING METHOD — from the school's Common Methods document.\n"
+        f"You MUST use this exact method and representation in your worked example.\n"
+        f"Do not invent a different approach or substitute an equivalent method:\n\n"
+        f"{methods_text}"
+        if methods_text else ""
+    )
     vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:8])}" if vocabulary else "")
     misconc_str = (f"\n\nCommon misconception to address: {misconceptions[0]}"
                    if misconceptions else "")
@@ -691,6 +700,9 @@ def generate_teaching_sequence(objective: str, topic: str,
         "Write three connected teaching slides for this objective, using NEAR-VARIATION:\n\n"
         "I DO (teacher demonstration):\n"
         "- ONE specific numerical worked example (e.g. 'Find 35% of 240', not abstract)\n"
+        "- CRITICAL: your worked example MUST mirror the exact representation shown in the "
+        "MANDATORY TEACHING METHOD above — use the same structure, notation, and steps. "
+        "Do not substitute a different method even if it would also be valid.\n"
         "- Show EVERY line of working; after each step add [why] in brackets\n"
         "- End with: 'In general: [method in one sentence]'\n"
         "- heading: 5–8 words; notes: 1–2 sentences on key emphasis and common error\n\n"
@@ -715,7 +727,11 @@ def generate_mini_whiteboard_questions(objective: str, topic: str,
     if _demo_mode:
         return _stub_mini_wb(objective)
 
-    extra = (f"\n\nCommon Methods guidance:\n{methods_text[:400]}" if methods_text else "")
+    extra = (
+        f"\n\nMANDATORY METHOD — all questions must reflect this approach from the school's "
+        f"Common Methods document:\n\n{methods_text}"
+        if methods_text else ""
+    )
 
     prompt = (
         f"Topic: {topic}\nObjective: {objective}{extra}\n\n"
@@ -742,7 +758,11 @@ def generate_independent_practice(objective: str, topic: str,
         return _stub_indep_practice(objective)
 
     vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:8])}" if vocabulary else "")
-    extra = (f"\n\nCommon Methods guidance:\n{methods_text[:300]}" if methods_text else "")
+    extra = (
+        f"\n\nMANDATORY METHOD — questions must reflect this approach from the school's "
+        f"Common Methods document:\n\n{methods_text}"
+        if methods_text else ""
+    )
 
     prompt = (
         f"Topic: {topic}\nObjective: {objective}{vocab_str}{extra}\n\n"
