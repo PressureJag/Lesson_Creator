@@ -71,7 +71,7 @@ A live document tracking outstanding work. Updated as new tasks are identified.
   # instead of typing the full --summary / --methods / --topic flags each time
   ```
 
-- [ ] **Cleaner terminal output** — replace plain print statements with a progress indicator so it's obvious the tool hasn't hung during API calls (each API call takes 3–10 seconds)
+- [x] **Cleaner terminal output** — replaced plain print statements with a full notification system (`generator/notification.py`)
 
 - [ ] **Test all 4 diagram types** — confirm bar model, number line, area grid, and angle diagram all render correctly and appear on the right slide types
 
@@ -85,6 +85,8 @@ A live document tracking outstanding work. Updated as new tasks are identified.
 ---
 
 ## 📋 Completed
+
+- [x] **Real-time notification system** — `generator/notification.py` (terminal headers, progress icons, numbered choice prompts with 2-min countdown), `generator/planner.py` (per-objective teaching approach options), `generator/gdrive.py` (auto-upload to Google Drive `Lesson Creator/` folder after generation), startup API confirmation prompt, between-objective checkpoints (continue / skip next / abort)
 
 - [x] Core project structure (`generate_lesson.py`, `generator/` modules)
 - [x] SOW PDF parser — two-column auto-detection, handles vocabulary sub-columns

@@ -8,6 +8,11 @@ _client = None
 _demo_mode = not bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
 
 
+def set_demo_mode(value: bool) -> None:
+    global _demo_mode
+    _demo_mode = value
+
+
 def _get_client():
     global _client
     if _client is None:
