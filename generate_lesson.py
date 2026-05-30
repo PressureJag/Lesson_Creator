@@ -61,6 +61,8 @@ def build_diagram(obj_text: str, diagram_override=None):
 # ── Slide deck assembly ──────────────────────────────────────────────────────
 
 def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> None:
+    import json as _json
+
     prs = Presentation()
     prs.slide_width  = T.SLIDE_WIDTH
     prs.slide_height = T.SLIDE_HEIGHT
@@ -76,6 +78,9 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
 
     total = len(objectives)
     methods_pages = list(methods.values())
+
+    # Content log — saved as JSON alongside the PPTX for review/editing
+    content_log = {"topic": topic_name, "objectives": []}
 
     header(
         f"BUILDING DECK  —  {topic_name}",
@@ -140,8 +145,11 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
         # ── Build slides for this objective ───────────────────
         notify(f"Objective {idx}/{total}: {obj[:55]} …", "section")
 
+        # Misconception for this objective (if available)
+        obj_misconc = [misconcs[idx - 1]] if idx <= len(misconcs) else []
+
         notify("Generating retrieval starter …", "progress")
-        retrieval = content_gen.generate_retrieval_questions(prior, obj, topic_name)
+        retrieval = content_gen.generate_retrieval_questions(prior, obj, topic_name, vocab)
         slide_builder.make_retrieval_starter(prs, topic_name, retrieval["questions"])
         slide_builder.make_retrieval_starter(
             prs, topic_name, retrieval["questions"],
@@ -157,7 +165,9 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
 
         # I Do
         notify("Generating worked example (I Do) …", "progress")
-        worked = content_gen.generate_worked_example(obj, topic_name, methods_text)
+        worked = content_gen.generate_worked_example(
+            obj, topic_name, methods_text, vocab, obj_misconc
+        )
         slide_builder.make_teaching_text(
             prs, topic_name,
             worked["heading"], worked["example"], worked.get("notes", ""),
@@ -176,18 +186,18 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
 
         # We Do
         notify("Generating guided practice (We Do) …", "progress")
-        we_do = content_gen.generate_we_do(obj, topic_name, methods_text)
+        we_do = content_gen.generate_we_do(obj, topic_name, methods_text, vocab)
         slide_builder.make_we_do(prs, topic_name, we_do, answers=False)
         slide_builder.make_we_do(prs, topic_name, we_do, answers=True)
 
         # WSWT
         notify("Generating What's the Same / What's Different …", "progress")
-        wswt = content_gen.generate_wswt_pair(obj, topic_name)
+        wswt = content_gen.generate_wswt_pair(obj, topic_name, vocab)
         slide_builder.make_wswt(prs, topic_name, wswt["pair_a"], wswt["pair_b"])
 
         # You Do
         notify("Generating practice questions (You Do) …", "progress")
-        practice = content_gen.generate_practice_questions(obj, topic_name)
+        practice = content_gen.generate_practice_questions(obj, topic_name, vocab, obj_misconc)
         qs  = practice["questions"]
         ans = practice["answers"]
         slide_builder.make_practice(
@@ -208,14 +218,29 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
         slide_builder.make_reasoning(prs, topic_name, reasoning, task_type)
 
         # Misconception
-        if idx <= len(misconcs):
+        if obj_misconc:
             slide_builder.make_misconception(
                 prs, topic_name,
-                misconcs[idx - 1],
-                f"Remember: {misconcs[idx - 1].split('.')[0]} — check your working carefully."
+                obj_misconc[0],
+                f"Remember: {obj_misconc[0].split('.')[0]} — check your working carefully."
             )
 
         notify(f"Objective {idx}/{total} complete  ({len(prs.slides)} slides so far)", "success")
+
+        # ── Log content for JSON export ───────────────────────
+        content_log["objectives"].append({
+            "index": idx,
+            "objective": obj,
+            "retrieval": retrieval,
+            "hook": hook,
+            "worked_example": worked,
+            "we_do": we_do,
+            "wswt": wswt,
+            "practice": practice,
+            "reasoning": reasoning,
+            "reasoning_type": task_type,
+            "misconception": obj_misconc[0] if obj_misconc else None,
+        })
 
         # ── Between-objective checkpoint ──────────────────────
         if idx < total:
@@ -253,13 +278,19 @@ def build_deck(sow: dict, methods: dict, topic_name: str, output_path: str) -> N
         notify("Building extension slide …", "progress")
         slide_builder.make_extension(prs, topic_name, "Going Further", extend)
 
-    # ── Save ──────────────────────────────────────────────────
+    # ── Save PPTX ─────────────────────────────────────────────
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     prs.save(output_path)
+
+    # ── Save content JSON (for review / refinement) ───────────
+    content_path = output_path.replace(".pptx", "_content.json")
+    with open(content_path, "w", encoding="utf-8") as f:
+        _json.dump(content_log, f, indent=2, ensure_ascii=False)
 
     slide_count = len(prs.slides)
     header("GENERATION COMPLETE", f"{slide_count} slides  →  {output_path}", color="\033[32m")
     notify(f"Saved: {output_path}", "success")
+    notify(f"Content JSON: {content_path}", "info")
 
     # ── Google Drive upload ────────────────────────────────────
     notify("Uploading to Google Drive …", "progress")

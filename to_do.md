@@ -45,6 +45,14 @@ A live document tracking outstanding work. Updated as new tasks are identified.
   - WSWT pairs require a named structural variation and "What changed?" prompt
   - We Do requires near-variation of I Do (same method, same steps, different values only)
 
+- [x] **Content generation overhaul** — `content_gen.py` now uses:
+  - Structured outputs (`output_config.format` + JSON schemas) — no more fragile regex parsing
+  - Cached system prompt (`cache_control: ephemeral`) shared across all calls in a session
+  - `claude-opus-4-8` for accuracy-critical content (worked examples, practice questions, We Do)
+  - `claude-sonnet-4-6` for contextual content (hooks, retrieval, reasoning, WSWT)
+  - Vocabulary and misconceptions threaded into generation prompts for SoW alignment
+  - Content JSON export saved alongside PPTX (`Output/<topic>_content.json`) for review
+
 - [ ] **Maths-specific enhancements** — further improvements to consider:
   - Fraction / ratio bar models as a default diagram type for proportion topics
   - Algebraic notation rendering (e.g. proper superscript for powers)

@@ -2,10 +2,78 @@
 
 import json
 import os
-import re
 
 _client = None
 _demo_mode = not bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+
+# ── Shared system prompt (cached via cache_control) ───────────────────────────
+
+_SYSTEM_PROMPT = (
+    "You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.\n"
+    "You write maths lesson content for secondary school students in England (ages 11–16).\n\n"
+    "Rules you always follow:\n"
+    "- ALL maths must be correct — verify every calculation before writing it\n"
+    "- Use plain-text notation: x^2, sqrt(x), fractions as a/b, × for multiply\n"
+    "- Apply variation theory: vary ONE feature at a time across question sets\n"
+    "- Fluency → Reasoning → Problem Solving arc in practice questions\n"
+    "- Write for the specific objective given — never write generic filler content\n"
+    "- Worked examples must use REAL specific numbers, not placeholders like 'X' or 'a value'\n"
+)
+
+# ── JSON schemas for structured outputs ──────────────────────────────────────
+
+_SCHEMA_RETRIEVAL = {
+    "type": "object",
+    "properties": {
+        "questions": {"type": "array", "items": {"type": "string"}},
+        "answers":   {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["questions", "answers"],
+    "additionalProperties": False,
+}
+
+_SCHEMA_WORKED_EXAMPLE = {
+    "type": "object",
+    "properties": {
+        "heading": {"type": "string"},
+        "example": {"type": "string"},
+        "notes":   {"type": "string"},
+    },
+    "required": ["heading", "example", "notes"],
+    "additionalProperties": False,
+}
+
+_SCHEMA_WE_DO = {
+    "type": "object",
+    "properties": {
+        "heading": {"type": "string"},
+        "problem": {"type": "string"},
+        "steps":   {"type": "array", "items": {"type": "string"}},
+        "answer":  {"type": "string"},
+    },
+    "required": ["heading", "problem", "steps", "answer"],
+    "additionalProperties": False,
+}
+
+_SCHEMA_PRACTICE = {
+    "type": "object",
+    "properties": {
+        "questions": {"type": "array", "items": {"type": "string"}},
+        "answers":   {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["questions", "answers"],
+    "additionalProperties": False,
+}
+
+_SCHEMA_WSWT = {
+    "type": "object",
+    "properties": {
+        "pair_a": {"type": "string"},
+        "pair_b": {"type": "string"},
+    },
+    "required": ["pair_a", "pair_b"],
+    "additionalProperties": False,
+}
 
 
 def set_demo_mode(value: bool) -> None:
@@ -21,15 +89,39 @@ def _get_client():
     return _client
 
 
-def _call(prompt: str, max_tokens: int = 1200) -> str:
+def _call(prompt: str, max_tokens: int = 800,
+          model: str = "claude-sonnet-4-6") -> str:
+    """Plain-text API call with cached system prompt."""
     client = _get_client()
-    import anthropic
     msg = client.messages.create(
-        model="claude-sonnet-4-6",
+        model=model,
         max_tokens=max_tokens,
-        messages=[{"role": "user", "content": prompt}]
+        system=[{
+            "type": "text",
+            "text": _SYSTEM_PROMPT,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": prompt}],
     )
     return msg.content[0].text.strip()
+
+
+def _call_json(prompt: str, schema: dict, max_tokens: int = 1500,
+               model: str = "claude-opus-4-8") -> dict:
+    """JSON API call using structured outputs — guarantees valid JSON matching schema."""
+    client = _get_client()
+    msg = client.messages.create(
+        model=model,
+        max_tokens=max_tokens,
+        system=[{
+            "type": "text",
+            "text": _SYSTEM_PROMPT,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        output_config={"format": {"type": "json_schema", "schema": schema}},
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return json.loads(msg.content[0].text)
 
 
 # ── Stub helpers (no API) ────────────────────────────────────────────────────
@@ -156,7 +248,7 @@ def _stub_wswt(objective: str) -> dict:
         ),
         "pair_b": (
             f"Example B: [{short}]\n\n"
-            f"[Same method — ONE feature deliberately changed, e.g. sign / form / number of steps]\n\n"
+            f"[Same method — ONE feature deliberately changed]\n\n"
             f"Step 1: → ...\n"
             f"Step 2: → ...\n"
             f"Answer: ...\n\n"
@@ -170,31 +262,26 @@ def _stub_wswt(objective: str) -> dict:
 
 def generate_retrieval_questions(prior_knowledge: list,
                                  objective: str,
-                                 topic: str) -> dict:
+                                 topic: str,
+                                 vocabulary: list = None) -> dict:
     if _demo_mode:
         return _stub_retrieval(prior_knowledge)
 
     pk = "\n".join(f"- {p}" for p in prior_knowledge[:6])
-    prompt = f"""You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.
+    vocab_str = ""
+    if vocabulary:
+        vocab_str = f"\n\nKey vocabulary for this topic: {', '.join(vocabulary[:8])}"
 
-Topic being taught next: {topic} — Objective: {objective}
-
-Prior knowledge students should have:
-{pk}
-
-Generate exactly 4 retrieval starter questions that test this prior knowledge.
-Questions should be concise, appropriate for a warm-up (answerable in 1-2 minutes each).
-Include a mix of recall, application, and short calculation questions.
-All maths must be correct. Verify every numerical answer.
-
-Respond ONLY with valid JSON in this exact format:
-{{"questions": ["q1", "q2", "q3", "q4"], "answers": ["a1", "a2", "a3", "a4"]}}"""
-
-    text = _call(prompt)
-    m = re.search(r'\{.*\}', text, re.DOTALL)
-    if m:
-        return json.loads(m.group(0))
-    return _stub_retrieval(prior_knowledge)
+    prompt = (
+        f"Topic: {topic}\nObjective being taught next: {objective}\n\n"
+        f"Prior knowledge students should have:\n{pk}{vocab_str}\n\n"
+        "Write exactly 4 retrieval starter questions that test this prior knowledge.\n"
+        "Each question must be answerable in 1–2 minutes (warm-up pace).\n"
+        "Include a mix of recall, short calculation, and application. "
+        "All maths must be correct with specific numbers, not variables.\n\n"
+        "Return JSON with keys: questions (array of 4 strings), answers (array of 4 strings)."
+    )
+    return _call_json(prompt, _SCHEMA_RETRIEVAL, max_tokens=800, model="claude-sonnet-4-6")
 
 
 def generate_hook(objective: str, topic: str,
@@ -203,216 +290,182 @@ def generate_hook(objective: str, topic: str,
         return _stub_hook(objective)
 
     pd = "\n".join(f"- {p}" for p in personal_development[:4])
-    prompt = f"""You are an experienced UK secondary maths teacher.
-
-Maths topic: {topic}
-Objective: {objective}
-
-Real-world connections suggested by the school:
-{pd}
-
-Write a short, engaging real-world hook scenario (4-6 sentences) that motivates WHY students
-need to learn this objective. Use a relatable context (shopping, sport, social media, etc.).
-Make it feel genuine. Do not use bullet points — write it as flowing text."""
-    return _call(prompt, max_tokens=400)
+    prompt = (
+        f"Maths topic: {topic}\nObjective: {objective}\n\n"
+        f"Real-world connections from the school's SoW:\n{pd}\n\n"
+        "Write a short, engaging real-world hook (4–6 sentences) that motivates WHY "
+        "students need this objective. Use a relatable context (shopping, sport, social media, etc.). "
+        "Be genuine — avoid clichés. No bullet points; write as flowing text."
+    )
+    return _call(prompt, max_tokens=400, model="claude-sonnet-4-6")
 
 
 def generate_worked_example(objective: str, topic: str,
-                             methods_text: str = "") -> dict:
+                             methods_text: str = "",
+                             vocabulary: list = None,
+                             misconceptions: list = None) -> dict:
     if _demo_mode:
         return _stub_worked_example(objective, methods_text)
 
-    extra = f"\n\nTeaching method from the school's Common Methods document (follow this approach):\n{methods_text[:800]}" \
-            if methods_text else ""
-    prompt = f"""You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.
+    extra = (f"\n\nTeaching method from the school's Common Methods document:\n{methods_text[:800]}"
+             if methods_text else "")
+    vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:8])}"
+                 if vocabulary else "")
+    misconc_str = (f"\n\nCommon misconception to address: {misconceptions[0]}"
+                   if misconceptions else "")
 
-Topic: {topic}
-Objective: {objective}{extra}
-
-Write ONE complete worked example teaching this objective using the I Do model (teacher demonstration).
-
-Requirements:
-- Choose a concrete numerical example with specific, realistic values — not just variables or 'a number'
-- Show EVERY line of working; after each step add a brief annotation in brackets explaining WHY that step is taken
-- After the numerical example, write one line beginning "In general:" that states the generalised method
-- Keep the example at middling difficulty — not trivial, but not examination-hard
-- Plain text notation only: x^2, sqrt(x), fractions as a/b, × for multiply — no LaTeX
-
-All maths MUST be correct. Verify every calculation before writing it.
-
-Respond ONLY with valid JSON:
-{{"heading": "short heading (5-8 words)", "example": "full annotated worked example", "notes": "1-2 sentences: what to emphasise when modelling AND the most common error students make here"}}"""
-    text = _call(prompt, max_tokens=1000)
-    m = re.search(r'\{.*\}', text, re.DOTALL)
-    if m:
-        return json.loads(m.group(0))
-    return _stub_worked_example(objective, methods_text)
+    prompt = (
+        f"Topic: {topic}\nObjective: {objective}{extra}{vocab_str}{misconc_str}\n\n"
+        "Write ONE complete I Do (teacher demonstration) worked example.\n\n"
+        "REQUIREMENTS:\n"
+        "- Use a SPECIFIC numerical example with real numbers "
+        "(e.g. 'Find 35% of 240', not 'Find X% of Y')\n"
+        "- Show EVERY line of working; after each step add [why this step is taken] in brackets\n"
+        "- End with one line starting 'In general:' that states the generalised method\n"
+        "- Middle difficulty — accessible but not trivial\n"
+        "- Verify all arithmetic before writing it\n\n"
+        "Return JSON with keys: heading (5–8 words), example (full annotated working), "
+        "notes (1–2 sentences on what to emphasise and the most common error here)."
+    )
+    return _call_json(prompt, _SCHEMA_WORKED_EXAMPLE, max_tokens=1200, model="claude-opus-4-8")
 
 
 def generate_we_do(objective: str, topic: str,
-                   methods_text: str = "") -> dict:
+                   methods_text: str = "",
+                   vocabulary: list = None) -> dict:
     if _demo_mode:
         return _stub_we_do(objective)
 
     extra = (f"\n\nCommon Methods guidance:\n{methods_text[:600]}"
              if methods_text else "")
-    prompt = f"""You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.
+    vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:6])}"
+                 if vocabulary else "")
 
-Topic: {topic}
-Objective: {objective}{extra}
-
-Write a 'We Do' guided practice problem for the class to work through TOGETHER immediately after the I Do demonstration.
-
-Requirements:
-- Use the same method and same number of steps as the I Do example — only the specific values should change (near-variation, not a different problem type)
-- The problem statement must include specific numerical values — not abstract or symbolic
-- The 4 scaffold steps must be method-specific prompts for THIS objective, not generic advice. Each step should name what to do (e.g. "Write the multiplier as a decimal: 1 + ...") without giving the answer
-- The answer must show every line of working, with the final answer clearly stated
-
-Respond ONLY with valid JSON:
-{{
-  "heading": "We Do — short descriptor (4-6 words)",
-  "problem": "specific problem statement with numerical values (1-3 sentences)",
-  "steps": [
-    "Step 1: method-specific prompt for this objective (prompt only, not the answer)",
-    "Step 2: ...",
-    "Step 3: ...",
-    "Step 4: ..."
-  ],
-  "answer": "full worked solution showing every step and the final answer with units"
-}}
-
-All maths must be correct. Verify every numerical answer. Plain text notation only (^2, sqrt(), fractions as a/b)."""
-    text = _call(prompt, max_tokens=900)
-    m = re.search(r'\{.*\}', text, re.DOTALL)
-    if m:
-        return json.loads(m.group(0))
-    return _stub_we_do(objective)
+    prompt = (
+        f"Topic: {topic}\nObjective: {objective}{extra}{vocab_str}\n\n"
+        "Write a 'We Do' guided practice problem for the class to work TOGETHER "
+        "immediately after the I Do demonstration.\n\n"
+        "REQUIREMENTS:\n"
+        "- Same method and same number of steps as I Do — only the specific numbers change "
+        "(near-variation, not a different problem type)\n"
+        "- Problem statement must include specific numerical values (not abstract)\n"
+        "- 4 scaffold steps must be method-specific prompts for THIS objective "
+        "(e.g. 'Write the multiplier as a decimal: 1 + ...') — no answers in steps\n"
+        "- Answer must show every line of working with the final answer clearly stated\n"
+        "- Verify all arithmetic\n\n"
+        "Return JSON with keys: heading (4–6 words), problem (specific problem with numbers), "
+        "steps (array of 4 method-specific prompt strings), "
+        "answer (full worked solution with every step)."
+    )
+    return _call_json(prompt, _SCHEMA_WE_DO, max_tokens=1000, model="claude-opus-4-8")
 
 
 def generate_practice_questions(objective: str, topic: str,
-                                level: str = "mixed") -> dict:
+                                 vocabulary: list = None,
+                                 misconceptions: list = None) -> dict:
     if _demo_mode:
         return _stub_practice(objective)
 
-    prompt = f"""You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.
+    vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:8])}"
+                 if vocabulary else "")
+    misconc_str = (f"\n\nCommon misconception: {misconceptions[0]}"
+                   if misconceptions else "")
 
-Topic: {topic}
-Objective: {objective}
-
-Write exactly 8 practice questions using VARIATION THEORY and the Fluency → Reasoning → Problem Solving model.
-
-FLUENCY — questions a, b, c (vary ONE element at a time to build conceptual understanding):
-  a) The simplest case: integer values, single step, no context
-  b) Same structure as a) — vary exactly ONE feature (e.g. use a decimal, change a sign, reverse the operation)
-  c) Same structure as b) — vary ONE more feature (e.g. introduce a fraction, add a step, change the form)
-  These three questions must form a deliberate progression — a student should notice what changes and what stays the same.
-
-REASONING — questions d, e, f (require interpretation, not just calculation):
-  d) Single-step context problem (shopping, measurement, sport, etc.) — students must identify what to calculate
-  e) Multi-step context problem — requires two or more calculations, or an embedded decision
-  f) Comparison or justification: "Which is greater / better value / more efficient?" OR "Is this answer correct? Explain."
-
-PROBLEM SOLVING — questions g, h (non-routine — students must choose their own strategy):
-  g) A problem where the approach is not immediately obvious; the method must be decided by the student
-  h) A problem requiring generalisation, multiple valid approaches, OR finding all possible solutions
-
-Each question must fit on one line (concise wording). All maths MUST be correct — calculate and verify every answer.
-Plain text notation: ^2 for squared, sqrt() for roots, fractions as a/b.
-
-Respond ONLY with valid JSON:
-{{"questions": ["q_a", "q_b", "q_c", "q_d", "q_e", "q_f", "q_g", "q_h"],
-  "answers":   ["a_a", "a_b", "a_c", "a_d", "a_e", "a_f", "a_g", "a_h"]}}"""
-    text = _call(prompt, max_tokens=1500)
-    m = re.search(r'\{.*\}', text, re.DOTALL)
-    if m:
-        return json.loads(m.group(0))
-    return _stub_practice(objective)
+    prompt = (
+        f"Topic: {topic}\nObjective: {objective}{vocab_str}{misconc_str}\n\n"
+        "Write exactly 8 practice questions using VARIATION THEORY and the "
+        "Fluency → Reasoning → Problem Solving model.\n\n"
+        "FLUENCY (questions a, b, c — vary ONE element at a time):\n"
+        "  a) Simplest case: integer values, single step, no context\n"
+        "  b) Same structure — vary exactly ONE feature "
+        "(e.g. use a decimal, change a sign, reverse the operation)\n"
+        "  c) Same structure — vary ONE more feature "
+        "(e.g. fraction, extra step, different form)\n"
+        "  Students must be able to see WHAT CHANGES and WHAT STAYS THE SAME across a–c.\n\n"
+        "REASONING (questions d, e, f):\n"
+        "  d) Single-step context problem — student identifies what to calculate\n"
+        "  e) Multi-step context — two or more calculations, or embedded decision\n"
+        "  f) Comparison or justification: 'Which is greater/better value?' "
+        "OR 'Is this working correct? Explain.'\n\n"
+        "PROBLEM SOLVING (questions g, h):\n"
+        "  g) Non-routine — approach not immediately obvious; student decides method\n"
+        "  h) Generalise or find all solutions / multiple valid approaches\n\n"
+        "Each question must fit on one line. All maths MUST be correct with specific numbers.\n\n"
+        "Return JSON with keys: questions (array of 8 strings a–h), "
+        "answers (array of 8 strings a–h)."
+    )
+    return _call_json(prompt, _SCHEMA_PRACTICE, max_tokens=1800, model="claude-opus-4-8")
 
 
 def generate_reasoning_task(objective: str, topic: str,
-                            task_type: str = "asn") -> str:
+                             task_type: str = "asn") -> str:
     if _demo_mode:
         return _stub_reasoning(objective, task_type)
 
     if task_type == "asn":
-        prompt = f"""You are an experienced UK secondary maths teacher.
-
-Topic: {topic}
-Objective: {objective}
-
-Write an 'Always, Sometimes or Never?' task with exactly 4 statements about this objective.
-
-Rules for high-quality ASN statements:
-- At least one statement must be ALWAYS true (a general mathematical truth about this method)
-- At least one must be SOMETIMES true — with a non-obvious condition that separates the true and false cases. Avoid trivial conditions like "when the number is positive"
-- At least one must be NEVER true — based on a genuine misconception students commonly hold about this topic
-- Every statement must be genuinely ambiguous on first reading — do not make any statement obviously true or false
-- Statements should be complete mathematical claims (not vague generalisations)
-
-After the 4 statements, add one line: "Think about what happens when..." — give a hint that unlocks the hardest statement, without revealing the answer.
-
-Write plain text only — no bullet points, no LaTeX. All maths must be correct."""
-
+        prompt = (
+            f"Topic: {topic}\nObjective: {objective}\n\n"
+            "Write an 'Always, Sometimes or Never?' task with exactly 4 statements.\n\n"
+            "Rules for high-quality ASN statements:\n"
+            "- At least one ALWAYS true (a genuine mathematical truth)\n"
+            "- At least one SOMETIMES true — non-obvious condition separates true and false cases "
+            "(avoid trivial conditions like 'when the number is positive')\n"
+            "- At least one NEVER true — based on a genuine misconception students hold\n"
+            "- Every statement must be ambiguous on first reading\n"
+            "- Statements must be complete mathematical claims, not vague generalisations\n\n"
+            "After the 4 statements, add one line: 'Think about what happens when...' — "
+            "give a hint that unlocks the hardest statement without revealing the answer.\n\n"
+            "Plain text only. All maths must be correct."
+        )
     elif task_type == "open":
-        prompt = f"""You are an experienced UK secondary maths teacher.
-
-Topic: {topic}
-Objective: {objective}
-
-Write a Problem Solving task that requires students to apply: {objective}
-
-Requirements:
-- The problem must be multi-step: students need to decide on a strategy, not just follow a given procedure
-- Include a specific numerical scenario with all necessary information provided
-- The method to use should not be stated — students must recognise it from the context
-- Students must show working AND justify their final answer (not just calculate)
-- The problem should be solvable in 5–10 minutes with correct working
-- Do NOT write "Explain how you would approach..." — write a genuine problem to solve
-
-Write plain text only. No LaTeX. All maths must be correct and the problem must have a definite answer."""
-
+        prompt = (
+            f"Topic: {topic}\nObjective: {objective}\n\n"
+            "Write a Problem Solving task requiring students to apply this objective.\n\n"
+            "Requirements:\n"
+            "- Multi-step: students decide the strategy, method not given\n"
+            "- Specific numerical scenario with all necessary information provided\n"
+            "- Students must show working AND justify their answer (not just calculate)\n"
+            "- Solvable in 5–10 minutes with correct working\n"
+            "- Do NOT write 'Explain how you would...' — write a genuine problem with a "
+            "definite answer\n\n"
+            "Plain text only. All maths must be correct."
+        )
     else:
-        prompt = f"""You are an experienced UK secondary maths teacher.
+        prompt = (
+            f"Topic: {topic}\nObjective: {objective}\n\n"
+            "Write a reasoning task that deepens understanding of this objective. "
+            "Keep it concise (suitable for one slide). All maths must be correct. "
+            "Plain text only."
+        )
 
-Topic: {topic}
-Objective: {objective}
-
-Write a reasoning task that deepens understanding of this objective.
-Keep it concise (suitable for one slide). All maths must be correct.
-Write plain text only — no LaTeX."""
-
-    return _call(prompt, max_tokens=600)
+    return _call(prompt, max_tokens=600, model="claude-sonnet-4-6")
 
 
-def generate_wswt_pair(objective: str, topic: str) -> dict:
+def generate_wswt_pair(objective: str, topic: str,
+                       vocabulary: list = None) -> dict:
     if _demo_mode:
         return _stub_wswt(objective)
 
-    prompt = f"""You are an experienced UK secondary maths teacher.
+    vocab_str = (f"\n\nKey vocabulary: {', '.join(vocabulary[:6])}"
+                 if vocabulary else "")
 
-Topic: {topic}
-Objective: {objective}
-
-Create a 'What's the Same? What's Different?' task using deliberate variation:
-
-Requirements:
-- Both examples must use the same mathematical method / structure
-- Exactly ONE key feature must differ between them — this should be a mathematically significant change, not just different numbers (e.g. a sign change, integer vs fraction, factored vs expanded form, one extra step, a reversed operation)
-- The difference must reveal something important about the mathematics — students should gain insight, not just notice a surface change
-- Show full step-by-step working for both examples
-- End pair_b with this exact question on its own line: "What changed? What stayed the same? Why does it matter?"
-- State the intended variation clearly in the first line of pair_b (e.g. "Note: in this example, the value is negative.")
-
-All maths must be correct. Plain text notation only (x^2, sqrt(), fractions as a/b).
-
-Respond ONLY with valid JSON:
-{{"pair_a": "first example with full working", "pair_b": "second example with full working, variation note, and prompt question"}}"""
-    text = _call(prompt, max_tokens=700)
-    m = re.search(r'\{.*\}', text, re.DOTALL)
-    if m:
-        return json.loads(m.group(0))
-    return _stub_wswt(objective)
+    prompt = (
+        f"Topic: {topic}\nObjective: {objective}{vocab_str}\n\n"
+        "Create a 'What's the Same? What's Different?' task using deliberate variation.\n\n"
+        "Requirements:\n"
+        "- Both examples use the same mathematical method / structure\n"
+        "- Exactly ONE key feature differs — a mathematically significant change "
+        "(e.g. sign change, integer vs fraction, factored vs expanded, one extra step)\n"
+        "- The difference must reveal something important about the maths\n"
+        "- Show full step-by-step working for both examples\n"
+        "- Start pair_b with a 'Note:' line naming the variation "
+        "(e.g. 'Note: in this example the value is negative.')\n"
+        "- End pair_b with: 'What changed? What stayed the same? Why does it matter?'\n\n"
+        "All maths correct. Plain text notation.\n\n"
+        "Return JSON with keys: pair_a (first example with full working), "
+        "pair_b (second example with variation note, full working, and prompt question)."
+    )
+    return _call_json(prompt, _SCHEMA_WSWT, max_tokens=800, model="claude-sonnet-4-6")
 
 
 def select_diagram_type(objective: str):
