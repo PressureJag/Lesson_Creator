@@ -2,11 +2,16 @@
 """
 Lesson slide-deck generator for Outwood Grange Academies Trust.
 
-Usage:
+Usage — interactive (recommended):
+  python3 generate_lesson.py
+
+Usage — direct PDF paths:
   python3 generate_lesson.py \\
     --summary  "Examples/SOW/Algebra 1 - Core Plus Summary of Intent.pdf" \\
     --methods  "Examples/SOW/Algebra 1 - Consistent Methodology.pdf" \\
     --topic    "Algebra 1 Core Plus" \\
+    --year     "Year 9" \\
+    --pitch    "Core Plus" \\
     --output   "Output/Algebra_1.pptx"
 """
 
@@ -20,6 +25,7 @@ from generator import sow_parser, content_gen, slide_builder, diagram_gen, plann
 from generator import theme as T
 from generator.notification import header, notify, prompt_choice
 from generator import gdrive
+from generator import module_selector, class_profile as cp
 
 
 # ── Diagram builder ──────────────────────────────────────────────────────────
@@ -349,14 +355,23 @@ def _confirm_mode() -> bool:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate an Outwood lesson slide deck from a Scheme of Work."
+        description="Generate an Outwood lesson slide deck from a Scheme of Work.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Run with no arguments for the interactive module browser.\n"
+            "Supply --summary and --methods to skip module selection."
+        ),
     )
-    parser.add_argument("--summary",  required=True,
+    parser.add_argument("--summary",
                         help="Path to 'Core Plus Summary of Intent' PDF")
-    parser.add_argument("--methods",  required=True,
+    parser.add_argument("--methods",
                         help="Path to 'Common Methods / Consistent Methodology' PDF")
     parser.add_argument("--topic",    default="",
                         help="Topic name override (e.g. 'Algebra 1 Core Plus')")
+    parser.add_argument("--year",     default="",
+                        help="Year group (e.g. 'Year 9') — skips the interactive prompt")
+    parser.add_argument("--pitch",    default="",
+                        help="Teaching pitch (Nurture / Core / Core Plus / Extension)")
     parser.add_argument("--hours",    type=int, default=0,
                         help="Override recommended teaching hours")
     parser.add_argument("--output",   default="",
@@ -370,12 +385,43 @@ def main():
     mode_label = "DEMO" if demo else "FULL (API)"
     notify(f"Mode: {mode_label}", "info")
 
+    # ── Module / PDF resolution ───────────────────────────────
+    summary_path = args.summary
+    methods_path = args.methods
+    topic_override = args.topic
+    module_tier = ""
+
+    if not summary_path or not methods_path:
+        result = module_selector.select_module()
+        if result is None:
+            # Module browser cancelled — ask for paths manually
+            if not summary_path:
+                summary_path = _ask_pdf_path("Summary of Intent")
+            if not methods_path:
+                methods_path = _ask_pdf_path("Common Methods")
+            if not summary_path or not methods_path:
+                notify("Cannot generate without both PDF files — exiting", "error")
+                sys.exit(1)
+        else:
+            summary_path   = result["summary_pdf"]
+            methods_path   = result["methods_pdf"]
+            topic_override = topic_override or result["topic_name"]
+            module_tier    = result["module"].get("tier_name", "")
+
+    # ── Class profile ─────────────────────────────────────────
+    profile = cp.select_profile(
+        year=args.year,
+        pitch=args.pitch,
+        default_pitch=module_tier or "Core Plus",
+    )
+    content_gen.set_class_profile(profile)
+
     # ── Parse PDFs ────────────────────────────────────────────
     notify("Parsing Summary of Intent …", "progress")
-    sow = sow_parser.parse_summary(args.summary)
+    sow = sow_parser.parse_summary(summary_path)
 
-    if args.topic:
-        sow["topic"] = args.topic
+    if topic_override:
+        sow["topic"] = topic_override
     if args.hours:
         sow["time_hours"] = args.hours
 
@@ -383,12 +429,27 @@ def main():
     output_path = args.output or f"Output/{topic_name.replace(' ', '_')}.pptx"
 
     notify("Parsing Common Methods …", "progress")
-    methods = sow_parser.parse_methods(args.methods)
+    methods = sow_parser.parse_methods(methods_path)
 
-    notify(f"Topic:  {topic_name}", "info")
-    notify(f"Output: {output_path}", "info")
+    notify(f"Topic:   {topic_name}", "info")
+    notify(f"Class:   {profile['label']}", "info")
+    notify(f"Output:  {output_path}", "info")
 
     build_deck(sow, methods, topic_name, output_path)
+
+
+def _ask_pdf_path(label: str) -> str:
+    """Fallback: ask the user to enter a PDF path at the terminal."""
+    print(f"\n  Enter path to {label} PDF (or leave blank to cancel):")
+    print("  > ", end="", flush=True)
+    path = sys.stdin.readline().strip().strip('"').strip("'")
+    if not path:
+        return ""
+    from pathlib import Path
+    if not Path(path).exists():
+        notify(f"File not found: {path}", "warning")
+        return ""
+    return path
 
 
 if __name__ == "__main__":

@@ -5,20 +5,34 @@ import shutil
 import subprocess
 
 _demo_mode = not bool(shutil.which("claude"))
+_class_profile: dict = {}
 
-# ── Shared system prompt (cached via cache_control) ───────────────────────────
 
-_SYSTEM_PROMPT = (
-    "You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.\n"
-    "You write maths lesson content for secondary school students in England (ages 11–16).\n\n"
-    "Rules you always follow:\n"
-    "- ALL maths must be correct — verify every calculation before writing it\n"
-    "- Use plain-text notation: x^2, sqrt(x), fractions as a/b, × for multiply\n"
-    "- Apply variation theory: vary ONE feature at a time across question sets\n"
-    "- Fluency → Reasoning → Problem Solving arc in practice questions\n"
-    "- Write for the specific objective given — never write generic filler content\n"
-    "- Worked examples must use REAL specific numbers, not placeholders like 'X' or 'a value'\n"
-)
+def set_class_profile(profile: dict) -> None:
+    global _class_profile
+    _class_profile = profile
+
+
+def _build_system_prompt() -> str:
+    base = (
+        "You are an experienced UK secondary maths teacher for Outwood Grange Academies Trust.\n"
+        "You write maths lesson content for secondary school students in England (ages 11–16).\n\n"
+        "Rules you always follow:\n"
+        "- ALL maths must be correct — verify every calculation before writing it\n"
+        "- Use plain-text notation: x^2, sqrt(x), fractions as a/b, × for multiply\n"
+        "- Apply variation theory: vary ONE feature at a time across question sets\n"
+        "- Fluency → Reasoning → Problem Solving arc in practice questions\n"
+        "- Write for the specific objective given — never write generic filler content\n"
+        "- Worked examples must use REAL specific numbers, not placeholders like 'X' or 'a value'\n"
+    )
+    if _class_profile:
+        base += (
+            f"\nCLASS PROFILE: {_class_profile.get('label', '')}\n"
+            f"PITCH GUIDANCE: {_class_profile.get('pitch_guidance', '')}\n"
+            "You MUST follow the pitch guidance above when choosing example difficulty, "
+            "scaffolding level, notation complexity, and question range.\n"
+        )
+    return base
 
 # ── JSON schemas for structured outputs ──────────────────────────────────────
 
@@ -154,7 +168,7 @@ def set_demo_mode(value: bool) -> None:
 def _call(prompt: str, max_tokens: int = 800,
           model: str = "claude-sonnet-4-6") -> str:
     """Non-interactive call to the local claude CLI."""
-    full_prompt = f"{_SYSTEM_PROMPT}\n\n{prompt}"
+    full_prompt = f"{_build_system_prompt()}\n\n{prompt}"
     proc = subprocess.run(
         ["claude", "--print", "--model", model, "--output-format", "json"],
         input=full_prompt,
