@@ -45,18 +45,26 @@ python3 generate_lesson.py --summary ... --methods ... --topic ...
 
 ## Slide structure per objective block
 
-1. Section divider (full purple banner)
-2. Learning objective
-3. Hook / real-world context (first 2 objectives only)
-4. Worked example (teaching text)
-5. Visual diagram (bar model / number line / area grid / angle — if relevant)
-6. What's the Same? What's Different? (WSWT)
-7. Practice questions (8 graded a–h)
-8. Answers
-9. Reasoning task (alternates ASN / open)
-10. Misconception callout (red/green boxes)
+Each objective block starts with a retrieval starter pair, then the teaching sequence:
 
-Plus intro slides: Title → Prior Knowledge → Vocabulary → Retrieval Starter → Retrieval Answers
+1. Retrieval starter (questions based on prior knowledge for this objective)
+2. Retrieval answers
+3. Section divider (full purple banner)
+4. Learning objective
+5. Hook / real-world context (**all objectives**, not just first 2)
+6. Worked example (teaching text)
+7. Visual diagram (bar model / number line / area grid / angle — if relevant)
+8. What's the Same? What's Different? (WSWT)
+9. Practice questions (6 questions, two-column layout)
+10. Answers
+11. Reasoning task (alternates ASN / open by objective index)
+12. Misconception callout (red/green boxes — one per objective, matched by index)
+
+Intro slides (before objective blocks): Title → Prior Knowledge → Vocabulary
+
+**Slide count**: ~13–14 slides per objective. A 5-objective topic → ~61 slides. An 11-objective topic → ~130 slides.
+
+**Methods matching**: `methods_pages = list(methods.values())` — page N is matched to objective N by index first, keyword fallback only if N exceeds the page count.
 
 ## SOW PDF format
 
@@ -81,6 +89,19 @@ Install with: `pip3 install python-pptx pdfplumber matplotlib pillow anthropic`
 - `assets/image*.png` — extracted images from example lessons, not needed, not in git
 - Only `assets/outwood_logo.png` is committed
 
+## Live task tracking
+
+`to_do.md` in the project root is a live document tracking outstanding work. Update it whenever new tasks are identified or completed. Sections: 🔴 Must Fix / 🟡 Before First Real Use / 🟢 Quality Improvements / 🔵 Polish / 📋 Completed.
+
 ## GitHub remote
 
 `git@github.com:PressureJag/Lesson_Creator.git`
+
+## Known completed fixes (do not re-implement)
+
+- `lines` NameError in `sow_parser.py:222` — fixed; fallback now uses `objectives[0][:60]`
+- Yellow `#FFFFCC` background — applied in `_blank_slide()` in `slide_builder.py` via `YELLOW_BG` constant in `theme.py`
+- Hook limited to first 2 objectives — removed; hook now runs for every objective
+- Retrieval starter shared at top — removed; now per-objective inside the loop
+- Methods text matching by keyword — fixed; now index-based (page N → objective N) before keyword fallback
+- `python` not on PATH — always use `python3` on this machine
